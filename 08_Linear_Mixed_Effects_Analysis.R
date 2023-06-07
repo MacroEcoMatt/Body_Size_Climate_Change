@@ -183,7 +183,7 @@ sp_size_mod <- lme(LSize ~ 1,
            data= M_Size)
 plot(Variogram(sp_size_mod, form=~Lat+Lon|Binomial, maxDist = 5))
 
-#FULL LENGTH MODEL
+#FULL MASS:LENGTH MODEL
 size_model <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
                      lifestyle + activity_cycle + hibernation_torpor +
                      TPI_month_max:AI + TPI_month_max:HLU +
@@ -192,7 +192,7 @@ size_model <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #after step wise removal based on AIC and BIC
-#FINAL LENGTH MODEL
+#FINAL MASS:LENGTH MODEL
 
 final_size_model <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
                      activity_cycle + hibernation_torpor +
