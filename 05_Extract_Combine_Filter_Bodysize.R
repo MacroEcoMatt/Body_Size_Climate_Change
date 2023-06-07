@@ -11,13 +11,13 @@ library(readr)
 
 setwd("E:/Coding Files/Chapter 2 Validation/Raw Datafiles")
 
+#Vertnet files were renamed for ease of coding
 b <- vroom("Bird_BS.csv")
 m <- vroom("Mammal_BS.csv")
-r <- vroom("Reptile_BS.csv")
 
-all_classes <- rbind(b,m,r)
+all_classes <- rbind(b,m)
 
-rm(b,m,r)
+rm(b,m)
 gc()
 
 all_classes <- all_classes %>%
@@ -26,7 +26,8 @@ all_classes <- all_classes %>%
   filter(!is.na(specificepithet)) %>%
   filter(year > 1960 & year < 2019) %>%
   filter(!decimallatitude == decimallongitude)%>%
-  filter(!is.na(massing) | !is.na(lengthinmm))
+  filter(!is.na(massing) | !is.na(lengthinmm))%>%
+  mutate(Data_Source = "VertNet")
 
 vroom_write(all_classes, "Filtered_vertnet.csv")
 gc()
@@ -40,7 +41,8 @@ do_filter <- do %>%
   filter(between(Lon, -180, 180)) %>%
   filter(year > 1960 & year<2019) %>%
   filter(!is.na(Weight..gr.))%>%
-  rename(Weigth=Weight..gr.)
+  rename(Weigth=Weight..gr.)%>%
+  mutate(Data_Source = "DO et al")
 vroom_write(do_filter, "Filtered_DOetal_v2.csv", delim = ",")
 rm(do)
 ####Atlantic data
@@ -52,7 +54,8 @@ b_filter <- b %>%
   filter(between(Latitude_decimal_degrees, -90, 90)) %>%
   filter(between(Longitude_decimal_degrees, -180, 180)) %>%
   filter(Year > 1960 & Year < 2019) %>%
-  filter(!is.na(Body_mass.g.)|!is.na(Body_length.mm.))
+  filter(!is.na(Body_mass.g.)|!is.na(Body_length.mm.))%>%
+  mutate(Data_Source = "Atlantic")
 
 vroom_write(b_filter, "Filtered_Atl_Birds_v2.csv", delim = ",")
 
@@ -61,7 +64,8 @@ m_filter <- m %>%
   filter(between(latitude, -90, 90)) %>%
   filter(between(longitude, -180, 180)) %>%
   filter(year > 1960 & year < 2019) %>%
-  filter(!is.na(body_mass)|!is.na(body_length))
+  filter(!is.na(body_mass)|!is.na(body_length))%>%
+  mutate(Data_Source = "Atlantic")
 vroom_write(m_filter, "Filtered_Atl_Mammals.csv", delim = ",")
 
 ####Neon data
@@ -75,7 +79,8 @@ out <- l%>%
   filter(!is.na(decimalLatitude))%>%
   filter(!is.na(decimalLongitude))%>%
   filter(recapture=="N")%>%
-  filter(!is.na(totalLength)|!is.na(weight))
+  filter(!is.na(totalLength)|!is.na(weight))%>%
+  mutate(Data_Source = "Neon")
 write.csv(out, "Filtered_NEON_v2.csv")
 
 ####COMBINE FILES
@@ -94,7 +99,8 @@ vertsub <- vertsub %>%
   relocate(year, .before = day)%>%
   relocate(month, .before=day)%>%
   relocate(lifestage, .after=day)%>%
-  relocate(sex, .after=lifestage)%>%
+  relocate(sex, .after=lifestage)%>%%>%
+  relocate(Data_Source)%>%
   rename(Mass=massing,
          Year=year,
          Month=month,
@@ -109,7 +115,7 @@ vertsub <- vertsub %>%
          Age=lifestage,
          Sex = sex,
          Body_Length = lengthinmm)
-vertsub <- vertsub[1:15]
+vertsub <- vertsub[1:16]
 vroom_write(vertsub, "VertNet_Filtered_Final_v2.csv", delim = ",")
 
 
@@ -125,6 +131,7 @@ Atlsub <- Atlsub %>%
   relocate(year, .before = reproductive_stage)%>%
   relocate(Month, .before=reproductive_stage)%>%
   relocate(Day, .before=reproductive_stage)%>%
+  relocate(Data_Source)%>%
   rename(Mass=body_mass,
          Body_Length=body_length,
          Year=year,
@@ -137,7 +144,7 @@ Atlsub <- Atlsub %>%
          Binomial=binomial,
          Age=reproductive_stage,
          Sex=sex)
-Atlsub <- Atlsub[,-15]
+Atlsub <- Atlsub[,-16]
 Atlsub <- Atlsub %>% mutate(Sp = Binomial)%>%
   tidyr::separate(Sp, c("G", "Species"), sep = " ")%>%
   select(-G)%>% relocate(Species, .before=Binomial)
@@ -156,6 +163,7 @@ Atlbsub <- Atlbsub %>%
   relocate(Year, .before=Age)%>%
   relocate(Month, .before=Age)%>%
   relocate(Day, .before=Age)%>%
+  relocate(Data_Source)%>%
   rename(Mass=Body_mass.g.,
          Body_Length=Body_length.mm.,
          B_Length=Bill_length.mm.,
@@ -164,7 +172,7 @@ Atlbsub <- Atlbsub %>%
          Head_Length=Head_length_total.mm.,
          Lon = Longitude_decimal_degrees,
          Lat = Latitude_decimal_degrees)
-Altbsub2 <- Atlbsub[,-c(9:12)]
+Altbsub2 <- Atlbsub[,-c(10:13)]
 vroom_write(Altbsub2, "Atl_Birds_Filtered_Final_v2.csv", delim = ",")
 
 
@@ -186,6 +194,7 @@ Neonsub <- Neonsub %>%
   relocate(Lon, .before=Lat)%>%
   relocate(collectDate, .before=Sex)%>%
   relocate(Age, .before=Sex)%>%
+  relocate(Data_Source)%>%
   tidyr::separate(collectDate, c("Year","Month","Day"), sep="-")%>%
   filter(recapture=="N")%>%
   select(-recapture)
@@ -202,6 +211,7 @@ dosub <- do%>%
   relocate(Lat, .before=year)%>%
   relocate(Age, .after = day)%>%
   relocate(Sex, .after=Age)%>%
+  relocate(Data_Source)%>%
   rename(Mass=Weigth,
          Year=year,
          Month=month,
