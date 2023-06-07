@@ -1,3 +1,8 @@
+#' ---
+#' Step 7: Creates Class and measurement specific Datafiles
+#' Matthew Watson
+#' Adds in trait data to the datafiles and filters final datafiles
+#' ---
 library(vroom)
 library(dplyr)
 
