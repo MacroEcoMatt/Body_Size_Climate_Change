@@ -291,160 +291,156 @@ contrasts(B_Size_c$activity_cycle) = contr.sum(2)
 ####MASS ANALYSIS####
 
 #spatial variogram
-sp_mass_mod <- lme(LMass ~ 1,
+sp_mass_mod_b <- lme(LMass ~ 1,
            random = ~1|Binomial, 
-           data= M_Mass)
-plot(Variogram(sp_mass_mod, form=~Lat+Lon|Binomial, maxDist = 5))
+           data= B_Mass)
+plot(Variogram(sp_mass_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL MASS MODEL
-mass_model <- lmer(LMass ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
+mass_model_b <- lmer(LMass ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
                      TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial)+(1|Season),data=M_Mass,
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                     (1|Binomial)+(1|Season),data=B_Mass,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #after step wise removal based on AIC and BIC
 #FINAL MASS MODEL
 
-final_mass_model <- lmer(LMass ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
-                     TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial)+(1|Season),data=M_Mass,
+final_mass_model_b <- lmer(LMass ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                     (1|Binomial)+(1|Season),data=B_Mass,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
 #contrast coded complimentary model
-final_mass_model_c <- lmer(LMass ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
-                     TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial)+(1|Season),data=M_Mass_c,
+final_mass_model_c_b <- lmer(LMass ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                     (1|Binomial)+(1|Season),data=B_Mass_c,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-performance::check_singularity(mass_model_final)
-performance::check_model(mass_model_final)
+performance::check_singularity(final_mass_model_b)
+performance::check_model(final_mass_model_b)
 
-tab_model(final_mass_model,final_mass_model_c, digits=5, file = "Mammal_Mass_Results.html")
+tab_model(final_mass_model_b,final_mass_model_c_b, digits=5, file = "Bird_Mass_Results.html")
 
-sink("Mammal_mass_LME.txt")
-"Mammal Mass Model LME"
-summary(final_mass_model)
+sink("Bird_mass_LME.txt")
+"Bird Mass Model LME"
+summary(final_mass_model_b)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_mass_model))
+print(MuMIn::r.squaredGLMM(final_mass_model_b))
 ""
 ""
 "Contrast"
-summary(final_mass_model_c)
+summary(final_mass_model_c_b)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_mass_model_c))
+print(MuMIn::r.squaredGLMM(final_mass_model_c_b))
 sink()
 
 ####LENGTH ANALYSIS####
 #spatial variogram
-sp_length_mod <- lme(LLength ~ 1,
+sp_length_mod_b <- lme(LLength ~ 1,
            random = ~1|Binomial, 
-           data= M_Length)
-plot(Variogram(sp_length_mod, form=~Lat+Lon|Binomial, maxDist = 5))
+           data= B_Length)
+plot(Variogram(sp_length_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL LENGTH MODEL
-length_model <- lmer(LLength ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
+length_model_b <- lmer(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
                      TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial),data=M_Length,
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                     (1|Binomial),data=B_Length,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
-final_length_model <- lmer(LLength ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
-                     TPI_month_max:HLU +
-                     TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial),data=M_Length,
+final_length_model_b <- lmer(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:AI + TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:Migration +
+                     (1|Binomial),data=B_Length,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
 #contrast coded complimentary model
-final_length_model_c <- lmer(LLength ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
-                     TPI_month_max:HLU +
-                     TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial),data=M_Length_c,
+final_length_model_c_b <- lmer(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:AI + TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:Migration +
+                     (1|Binomial),data=B_Length_c,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-AIC(length_model,final_length_model)
-BIC(length_model,final_length_model)
-performance::check_singularity(final_length_model)
-performance::check_model(final_length_model)
+AIC(length_model_b,final_length_model_b)
+BIC(length_model_b,final_length_model_b)
+performance::check_singularity(final_length_model_b)
+performance::check_model(final_length_model_b)
 
-tab_model(final_length_model,final_length_model_c, digits=5, file = "Mammal_Length_Results.html")
+tab_model(final_length_model_b,final_length_model_c_b, digits=5, file = "Bird_Length_Results.html")
 
-sink("Mammal_length_LME.txt")
-"Mammal Length Model LME"
-summary(final_length_model)
+sink("Bird_length_LME.txt")
+"Bird Length Model LME"
+summary(final_length_model_b)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_length_model))
+print(MuMIn::r.squaredGLMM(final_length_model_b))
 ""
 ""
 "Contrast"
-summary(final_length_model_c)
+summary(final_length_model_c_b)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_length_model_c))
+print(MuMIn::r.squaredGLMM(final_length_model_c_b))
 sink()
 
 ####MASS:LENGTH ANALYSIS####
 #spatial variogram
-sp_size_mod <- lme(LSize ~ 1,
+sp_size_mod_b <- lme(LSize ~ 1,
            random = ~1|Binomial, 
-           data= M_Size)
-plot(Variogram(sp_size_mod, form=~Lat+Lon|Binomial, maxDist = 5))
+           data= B_Size)
+plot(Variogram(sp_size_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL LENGTH MODEL
-size_model <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
+size_model_b <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
                      TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial)+(1|Season),data=M_Size,
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                     (1|Binomial)+(1|Season),data=B_Size,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
-final_size_model <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     activity_cycle + hibernation_torpor +
-                     TPI_month_max:activity_cycle +
-                     (1|Binomial)+(1|Season),data=M_Size,
+final_size_model_b <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle +
+                     (1|Binomial)+(1|Season),data=B_Size,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
 #contrast coded complimentary model
-final_size_model_c <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     activity_cycle + hibernation_torpor +
-                     TPI_month_max:activity_cycle +
-                     (1|Binomial)+(1|Season),data=M_Size_c,
+final_size_model_c_b <- lmer(LSize ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle +
+                     (1|Binomial)+(1|Season),data=B_Size_c,
                    control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-AIC(size_model,final_size_model)
-BIC(size_model,final_size_model)
-performance::check_singularity(final_size_model)
-performance::check_model(final_size_model)
+AIC(size_model_b,final_size_model_b)
+BIC(size_model_b,final_size_model_b)
+performance::check_singularity(final_size_model_b)
+performance::check_model(final_size_model_b)
 
-tab_model(final_size_model,final_size_model_c, digits=5, file = "Mammal_Size_Results.html")
+tab_model(final_size_model_b,final_size_model_c_b, digits=5, file = "Bird_Size_Results.html")
 
-sink("Mammal_size_LME.txt")
-"Mammal Size Model LME"
-summary(final_size_model)
+sink("Bird_size_LME.txt")
+"Bird Size Model LME"
+summary(final_size_model_b)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_size_model))
+print(MuMIn::r.squaredGLMM(final_size_model_b))
 ""
 ""
 "Contrast"
-summary(final_size_model_c)
+summary(final_size_model_c_b)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_size_model_c))
+print(MuMIn::r.squaredGLMM(final_size_model_c_b))
 sink()
-
-
