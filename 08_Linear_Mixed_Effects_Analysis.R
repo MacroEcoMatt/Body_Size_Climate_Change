@@ -5,8 +5,6 @@
 #' ---
 library(vroom)
 library(dplyr)
-library(ape)
-library(phyr)
 library(sjmisc)
 library(sjPlot)
 library(nlme)
