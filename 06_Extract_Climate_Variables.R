@@ -108,7 +108,7 @@ DF <- datafile %>%
   mutate(TPI_yr_mean = ((YR_Tx_mean-YR_TMin)/(YR_TMax-YR_TMin))) %>%
   mutate(TPI_yr_max = ((YR_Tx_max-YR_TMin)/(YR_TMax-YR_TMin)))%>%
   mutate(TPI_yr_range = TPI_yr_max-TPI_yr_min)%>%
-  mutate(Aridity = ifelse(Aridity>100,100,Aridity))%>% 
+  mutate(AI = ifelse(Aridity>100,100,Aridity))%>% 
   group_by(Binomial) %>%
   mutate(Year_sc = Year - mean(Year))
 
