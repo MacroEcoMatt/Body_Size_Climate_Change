@@ -234,6 +234,7 @@ Template <- rbind(a,b,c,d,e)
 vroom_write(Template, "Full_Dataset_Filtered.csv", delim = ",")
 
 ################################################################################################
+# Data file was loaded into ArcGIS Pro and was filtered to remove datapoints in the oceans
 # add variables and correct sex,age and binomial names
 # filter based on body size measurement
 
@@ -297,6 +298,7 @@ All_Data_Season<- rbind(N,S)
 All_Data_2 <- All_Data_Season[with(All_Data_Season, order(Class, Binomial)), ]
 
 vroom_write(All_Data_2, "Full_Dataset_Filtered_Seasons.csv", delim=",")
+
 ################# Lifestage and Sex class corrections#################################
 lifes <- vroom("E:/Coding Files/Repositories/Thesis-Chapter-2/Final Code/Datafiles/agesort.csv")
 sexs <- vroom("E:/Coding Files/Repositories/Thesis-Chapter-2/Final Code/Datafiles/sexes_filter.csv")
@@ -312,6 +314,7 @@ All_Data_3 <- All_Data_2 %>% mutate(Age = ifelse(Age=="pregnant", "Adult",
                                                  if_else(Age=="scroted","Unknown", Age)))
 
 vroom_write(All_Data_3, "E:/Coding Files/Chapter 2 Validation/Full_Dataset_Filtered_Seasons_age_sex.csv", delim=",")
+
 ################# Name Correction ########################################
 
 All_Data_3 <- vroom("E:/Coding Files/Chapter 2 Validation/Full_Dataset_Filtered_Seasons_age_sex.csv", delim=",")
@@ -516,10 +519,10 @@ Mass3 <- Mass2 %>% filter(!is.na(Median_Mass))%>%
   group_by(Binomial)%>%filter(n()>99)
 vroom_write(Mass3, "E:/Coding Files/Chapter 2 Validation/Master_Mass.csv", delim=",")
 
-Adult_Length <- Final_Data %>%filter(!is.na(Body_Length))%>%filter(Age=="Adult")%>%mutate(loglength= log(Body_Length))%>%
+Adult_Length <- Final_Data%>%filter(!Data_Source=="Neon")%>%filter(!is.na(Body_Length))%>%filter(Age=="Adult")%>%mutate(loglength= log(Body_Length))%>%
   group_by(Binomial)%>% filter(n()>1)%>%summarise(Median_Length = median(loglength),
                                                   MAD_Length = mad(loglength))
-Length1 <- Final_Data %>% filter(!is.na(Body_Length))%>%mutate(loglength = log(Body_Length))
+Length1 <- Final_Data %>%filter(!Data_Source=="Neon")%>% filter(!is.na(Body_Length))%>%mutate(loglength = log(Body_Length))
 Length2 <- left_join(Length1,Adult_Length)
 Length3 <- Length2 %>% filter(!is.na(Median_Length))%>%
   filter(loglength > Median_Length-(5*MAD_Length)&loglength<Median_Length+(5*MAD_Length))%>%
