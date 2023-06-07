@@ -232,3 +232,182 @@ summary(phylo_s)
 print(rr2::R2_pred(phylo_s))
 sink()
 
+
+###############################BIRD ANALYSIS#############################################
+#change file path to location of datafiles
+B_Mass <- vroom("./Bird_Mass.csv")
+B_Length <- vroom("./Bird_Length.csv")
+B_Size <- vroom("./Bird_Size.csv")
+
+
+###Factor coding###
+B_Mass$Season <- as.factor(B_Mass$Season)
+B_Size$Season <- as.factor(B_Size$Season)
+
+B_Mass_c <- B_Mass
+B_Length_c <- B_Length
+B_Size_c <- B_Size
+
+#contrast coding for analysis#
+B_Mass$lifestyle <- as.factor(B_Mass$lifestyle)
+contrasts(B_Mass$lifestyle) = contr.sum(5)
+B_Mass$Migration <- as.factor(B_Mass$Migration)
+contrasts(B_Mass$Migration) = contr.sum(3)
+B_Mass$activity_cycle <- as.factor(B_Mass$activity_cycle)
+contrasts(B_Mass$activity_cycle) = contr.sum(2)
+
+B_Mass_c$lifestyle <- factor(as.character(B_Mass_c$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist") )
+contrasts(B_Mass_c$lifestyle) = contr.sum(5)
+B_Mass_c$Migration <- factor(as.character(B_Mass_c$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
+contrasts(B_Mass_c$Migration) = contr.sum(3)
+B_Mass_c$activity_cycle <- factor(as.character(B_Mass_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
+contrasts(B_Mass_c$activity_cycle) = contr.sum(2)
+
+B_Length$lifestyle <- as.factor(B_Length$lifestyle)
+contrasts(B_Length$lifestyle) = contr.sum(5)
+B_Length$Migration <- as.factor(B_Length$Migration)
+contrasts(B_Length$Migration) = contr.sum(3)
+B_Length$activity_cycle <- as.factor(B_Length$activity_cycle)
+contrasts(B_Length$activity_cycle) = contr.sum(2)
+
+B_Length_c$lifestyle <- factor(as.character(B_Length_c$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist") )
+contrasts(B_Length_c$lifestyle) = contr.sum(5)
+B_Length_c$Migration <- factor(as.character(B_Length_c$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
+contrasts(B_Length_c$Migration) = contr.sum(3)
+B_Length_c$activity_cycle <- factor(as.character(B_Length_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
+contrasts(B_Length_c$activity_cycle) = contr.sum(2)
+
+B_Size$lifestyle <- as.factor(B_Size$lifestyle)
+contrasts(B_Size$lifestyle) = contr.sum(5)
+B_Size$Migration <- as.factor(B_Size$Migration)
+contrasts(B_Size$Migration) = contr.sum(3)
+B_Size$activity_cycle <- as.factor(B_Size$activity_cycle)
+contrasts(B_Size$activity_cycle) = contr.sum(2)
+
+B_Size_c$lifestyle <- factor(as.character(B_Size_c$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist"))
+contrasts(B_Size_c$lifestyle) = contr.sum(5)
+B_Size_c$Migration <- factor(as.character(B_Size_c$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
+contrasts(B_Size_c$Migration) = contr.sum(3)
+B_Size_c$activity_cycle <- factor(as.character(B_Size_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
+contrasts(B_Size_c$activity_cycle) = contr.sum(2)
+
+###Phylogenetic Tree###
+Birdtree <- read.tree("E:/Coding Files/Chapter 2 Validation/Extra files for process/FinalBirdTree_analysis.tre")
+
+oldname_m <- Birdtree$tip.label
+newname_m <- Birdtree$tip.label
+for (n in 1:length(newname_m)){
+  newname_m[n] <- sub("([A-Za-z]+_[A-Za-z]+).*", "\\1", newname_m[n])
+  newname_m[n] <- sub("_"," ", newname_m[n])
+}
+DF_names_m <- as.data.frame(cbind(oldname_m,newname_m))
+Birdtree$tip.label<-DF_names_m[[2]][match(Birdtree$tip.label, DF_names_m[[1]])]
+
+m100 <- unique(BM_trait$Binomial)
+l100 <- unique(BL_trait$Binomial)
+s100 <- unique(BS_trait2$Binomial)
+
+bird_tree_mass <-drop.tip(Birdtree, Birdtree$tip.label[-na.omit(match(m100,Birdtree$tip.label))])
+bird_tree_length <-drop.tip(Birdtree, Birdtree$tip.label[-na.omit(match(l100,Birdtree$tip.label))])
+bird_tree_size <-drop.tip(Birdtree, Birdtree$tip.label[-na.omit(match(s100,Birdtree$tip.label))])
+
+
+treem <- unique(bird_tree_mass$tip.label)
+treel <- unique(bird_tree_length$tip.label)
+trees <- unique(bird_tree_size$tip.label)
+
+diff_m <- setdiff(m100,treem)
+diff_l<- setdiff(l100,treel)
+diff_s<- setdiff(s100,trees)
+
+B_Mass_tree <- B_Mass %>% filter(!Binomial %in% diff_m)
+B_Mass_c_tree <- B_Mass_c %>% filter(!Binomial %in% diff_m)
+B_Length_tree <- B_Length %>% filter(!Binomial %in% diff_l)
+B_Length_c_tree <- B_Length_c %>% filter(!Binomial %in% diff_l)
+B_Size_tree <- B_Size %>% filter(!Binomial %in% diff_s)
+B_Size_c_tree <- B_Size_c %>% filter(!Binomial %in% diff_s)
+
+####MASS ANALYSIS####
+Non_phylo_b <- pglmm(LMass ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                           (1|Binomial)+(1|Season), 
+                         data=B_Mass_tree,
+                         bayes = TRUE)
+
+phylo_b <- pglmm(LMass ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                      (1|Binomial__)+(1|Season), 
+                      data=B_Mass_tree, cov_ranef = list(Binomial = treem), 
+                      bayes = TRUE)
+
+sink("Bird_mass_nonphylo_and_phylo.txt")
+"Non Phylogenetic Model"
+summary(Non_phylo_b)
+"R squared"
+print(rr2::R2_pred(Non_phylo_b))
+""
+""
+"Phylogenetic Model"
+summary(phylo_b)
+"R squared"
+print(rr2::R2_pred(phylo_b))
+sink()
+
+####LENGTH ANALYSIS####
+Non_phylo_lb <- pglmm(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:AI + TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                       (1|Binomial),data=B_Length_tree,
+                         bayes = TRUE)
+
+
+phylo_lb <- pglmm(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle + Migration +
+                     TPI_month_max:AI + TPI_month_max:HLU +
+                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                        (1|Binomial__),data=B_Length_tree, cov_ranef = list(Binomial = treel), 
+                      bayes = TRUE)
+
+sink("Bird_length_nonphylo_and_phylo.txt")
+"Non Phylogenetic Model"
+summary(Non_phylo_lb)
+"R squared"
+print(rr2::R2_pred(Non_phylo_lb))
+""
+""
+"Phylogenetic Model"
+summary(phylo_lb)
+"R squared"
+print(rr2::R2_pred(phylo_lb))
+sink()
+
+####SIZE ANALYSIS####
+
+Non_phylo_sb <- pglmm(LSize ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle +
+                       (1|Binomial)+(1|Season),data=B_Size_tree
+                        ,bayes = TRUE)
+
+phylo_sb <- pglmm(LSize ~ Year_sc + TPI_month_max + AI + HLU +
+                     lifestyle + activity_cycle +
+                        (1|Binomial__)+(1|Season), 
+                      data=B_Size_tree, cov_ranef = list(Binomial = trees), 
+                      bayes = TRUE)
+
+sink("Bird_size_nonphylo_and_phylo.txt")
+"Non Phylogenetic Model"
+summary(Non_phylo_sb)
+"R squared"
+print(rr2::R2_pred(Non_phylo_sb))
+""
+""
+"Phylogenetic Model"
+summary(phylo_sb)
+"R squared"
+print(rr2::R2_pred(phylo_sb))
+sink()
