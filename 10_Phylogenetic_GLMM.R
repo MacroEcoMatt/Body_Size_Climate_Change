@@ -12,9 +12,9 @@ library(phyr)
 setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
-M_Mass <- vroom("./Mammal_Mass.csv")
-M_Length <- vroom("./Mammal_Length.csv")
-M_Size <- vroom("./Mammal_Size.csv")
+M_Mass <- vroom("./Data_S4_Mammal_Mass.csv")
+M_Length <- vroom("./Data_S5_Mammal_Length.csv")
+M_Size <- vroom("./Data_S6_Mammal_Size.csv")
 
 ###Factor coding###
 M_Mass$Season <- as.factor(M_Mass$Season)
@@ -85,7 +85,7 @@ mam_tree_mass <-drop.tip(mammaltree, mammaltree$tip.label[-na.omit(match(binom_m
 mt <- unique(mam_tree_mass$tip.label)
 mamdif <- setdiff(binom_mass,mt)
 M_Mass_tree <- M_Mass %>% filter(!Binomial %in% mamdif)
-M_Mass_tree+c <- M_Mass_c %>% filter(!Binomial %in% mamdif)
+M_Mass_tree_c <- M_Mass_c %>% filter(!Binomial %in% mamdif)
 
 binom_length <- unique(M_Length$Binomial)
 mam_tree_length <-drop.tip(mammaltree, mammaltree$tip.label[-na.omit(match(binom_length,mammaltree$tip.label))])
@@ -142,25 +142,25 @@ M_Size_c$Binomial[M_Size_c$Binomial=="Neotamias umbrinus"] <- "Tamias umbrinus"
 M_Size_tree_c <- M_Size_c %>% filter(!Binomial %in% mamdif_s)
 
 ####MASS ANALYSIS####
-Non_phylo_m <- pglmm(LMass ~ Year_sc + TPI_month_max + AI + HLU +
-                          lifestyle + activity_cycle + hibernation_torpor +
-                          TPI_month_max:AI + TPI_month_max:HLU+
-                          TPI_month_max:lifestyle + TPI_month_max:activity_cycle +
-                          TPI_month_max:hibernation_torpor +
-                           (1|Binomial)+(1|Season), 
-                         data=M_Mass_tree,
-                         bayes = TRUE)
+Non_phylo_m <- pglmm(LMass ~ TPI_month_max + AI + HLU +
+                       lifestyle + activity_cycle + hibernation_torpor +
+                       TPI_month_max:AI + TPI_month_max:HLU +
+                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + 
+                       TPI_month_max:hibernation_torpor +
+                       (1|Binomial), 
+                     data=M_Mass_tree,
+                     bayes = TRUE)
 
-phylo_m <- pglmm(LMass ~ Year_sc + TPI_month_max + AI_cor + HLU +
-                      lifestyle + activity_cycle + hibernation_torpor +
-                      TPI_month_max:AI_cor + TPI_month_max:HLU+
-                      TPI_month_max:lifestyle + TPI_month_max:activity_cycle +
-                      TPI_month_max:hibernation_torpor +
-                      (1|Binomial__)+(1|Season), 
-                      data=M_Mass_tree, cov_ranef = list(Binomial = mam_tree_100), 
-                      bayes = TRUE)
+phylo_m <- pglmm(LMass ~ TPI_month_max + AI + HLU +
+                   lifestyle + activity_cycle + hibernation_torpor +
+                   TPI_month_max:AI + TPI_month_max:HLU +
+                   TPI_month_max:lifestyle + TPI_month_max:activity_cycle + 
+                   TPI_month_max:hibernation_torpor +
+                   (1|Binomial__), 
+                 data=M_Mass_tree, cov_ranef = list(Binomial = mam_tree_mass), 
+                 bayes = TRUE)
 
-sink("Mammal_mass_nonphylo_and_phylo.txt")
+sink("Mammal_mass_nonphylo_and_phylo.csv")
 "Non Phylogenetic Model"
 summary(Non_phylo_m)
 "R squared"
@@ -174,24 +174,24 @@ print(rr2::R2_pred(phylo_m))
 sink()
 
 ####LENGTH ANALYSIS####
-Non_phylo_l <- pglmm(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+Non_phylo_l <- pglmm(LLength ~ TPI_month_max + AI + HLU +
                        lifestyle + activity_cycle + hibernation_torpor +
-                       TPI_month_max:HLU+
-                       TPI_month_max:activity_cycle +
+                       TPI_month_max:AI + TPI_month_max:HLU +
+                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + 
                        TPI_month_max:hibernation_torpor +
-                       (1|Binomial),data=M_Length_tree, cov_ranef = list(Binomial = mam_tree_100),
-                         bayes = TRUE)
+                       (1|Binomial),data=M_Length_tree, cov_ranef = list(Binomial = mam_tree_length), 
+                     bayes = TRUE)
 
 
-phylo_l <- pglmm(LLength ~ Year_sc + TPI_month_max + AI + HLU +
+phylo_l <- pglmm(LLength ~ TPI_month_max + AI + HLU +
                    lifestyle + activity_cycle + hibernation_torpor +
-                   TPI_month_max:HLU+
-                   TPI_month_max:activity_cycle +
+                   TPI_month_max:AI + TPI_month_max:HLU +
+                   TPI_month_max:lifestyle + TPI_month_max:activity_cycle + 
                    TPI_month_max:hibernation_torpor +
-                        (1|Binomial__),data=M_Length_tree, cov_ranef = list(Binomial = mam_tree_100), 
-                      bayes = TRUE)
+                   (1|Binomial__),data=M_Length_tree, cov_ranef = list(Binomial = mam_tree_length), 
+                 bayes = TRUE)
 
-sink("Mammal_length_nonphylo_and_phylo.txt")
+sink("Mammal_length_nonphylo_and_phylo.csv")
 "Non Phylogenetic Model"
 summary(Non_phylo_l)
 "R squared"
@@ -206,20 +206,22 @@ sink()
 
 ####SIZE ANALYSIS####
 
-Non_phylo_s <- pglmm(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     activity_cycle + hibernation_torpor +
-                     TPI_month_max:activity_cycle +
-                       (1|Binomial)+(1|Season),data=M_Size_tree
-                        ,bayes = TRUE)
+Non_phylo_s <- pglmm((log10(Mass)/log10(Body_Length)) ~ TPI_month_max + AI + HLU +
+                       lifestyle + activity_cycle + hibernation_torpor +
+                       TPI_month_max:AI + TPI_month_max:HLU +
+                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                       (1|Binomial),data=M_Size_tree
+                     ,bayes = TRUE)
 
-phylo_s <- pglmm(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     activity_cycle + hibernation_torpor +
-                     TPI_month_max:activity_cycle +
-                        (1|Binomial__)+(1|Season), 
-                      data=M_Size_tree, cov_ranef = list(Binomial = mam_tree_100), 
-                      bayes = TRUE)
+phylo_s <- pglmm((log10(Mass)/log10(Body_Length)) ~ TPI_month_max + AI + HLU +
+                   lifestyle + activity_cycle + hibernation_torpor +
+                   TPI_month_max:AI + TPI_month_max:HLU +
+                   TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                   (1|Binomial__), 
+                 data=M_Size_tree, cov_ranef = list(Binomial = mam_tree_size), 
+                 bayes = TRUE)
 
-sink("Mammal_size_nonphylo_and_phylo.txt")
+sink("Mammal_size_nonphylo_and_phylo.csv")
 "Non Phylogenetic Model"
 summary(Non_phylo_s)
 "R squared"
@@ -235,9 +237,9 @@ sink()
 
 ###############################BIRD ANALYSIS#############################################
 #change file path to location of datafiles
-B_Mass <- vroom("./Bird_Mass.csv")
-B_Length <- vroom("./Bird_Length.csv")
-B_Size <- vroom("./Bird_Size.csv")
+B_Mass <- vroom("./Data_S1_Bird_Mass.csv")
+B_Length <- vroom("./Data_S2_Bird_Length.csv")
+B_Size <- vroom("./Data_S3_Bird_Size.csv")
 
 
 ###Factor coding###
@@ -303,9 +305,9 @@ for (n in 1:length(newname_m)){
 DF_names_m <- as.data.frame(cbind(oldname_m,newname_m))
 Birdtree$tip.label<-DF_names_m[[2]][match(Birdtree$tip.label, DF_names_m[[1]])]
 
-m100 <- unique(BM_trait$Binomial)
-l100 <- unique(BL_trait$Binomial)
-s100 <- unique(BS_trait2$Binomial)
+m100 <- unique(B_Mass$Binomial)
+l100 <- unique(B_Length$Binomial)
+s100 <- unique(B_Size$Binomial)
 
 bird_tree_mass <-drop.tip(Birdtree, Birdtree$tip.label[-na.omit(match(m100,Birdtree$tip.label))])
 bird_tree_length <-drop.tip(Birdtree, Birdtree$tip.label[-na.omit(match(l100,Birdtree$tip.label))])
@@ -328,23 +330,23 @@ B_Size_tree <- B_Size %>% filter(!Binomial %in% diff_s)
 B_Size_c_tree <- B_Size_c %>% filter(!Binomial %in% diff_s)
 
 ####MASS ANALYSIS####
-Non_phylo_b <- pglmm(LMass ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + Migration +
-                     TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                           (1|Binomial)+(1|Season), 
-                         data=B_Mass_tree,
-                         bayes = TRUE)
+Non_phylo_b <- pglmm(log10(Mass) ~ TPI_month_max + AI + HLU +
+                       lifestyle + activity_cycle + Migration +
+                       TPI_month_max:AI + TPI_month_max:HLU +
+                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                       (1|Binomial), 
+                     data=B_Mass_tree,
+                     bayes = TRUE)
 
-phylo_b <- pglmm(LMass ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + Migration +
-                     TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                      (1|Binomial__)+(1|Season), 
-                      data=B_Mass_tree, cov_ranef = list(Binomial = treem), 
-                      bayes = TRUE)
+phylo_b <- pglmm(log10(Mass) ~ TPI_month_max + AI + HLU +
+                   lifestyle + activity_cycle + Migration +
+                   TPI_month_max:AI + TPI_month_max:HLU +
+                   TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                   (1|Binomial), 
+                 data=B_Mass_tree, cov_ranef = list(Binomial = bird_tree_mass), 
+                 bayes = TRUE)
 
-sink("Bird_mass_nonphylo_and_phylo.txt")
+sink("Bird_mass_nonphylo_and_phylo.csv")
 "Non Phylogenetic Model"
 summary(Non_phylo_b)
 "R squared"
@@ -358,22 +360,22 @@ print(rr2::R2_pred(phylo_b))
 sink()
 
 ####LENGTH ANALYSIS####
-Non_phylo_lb <- pglmm(LLength ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + Migration +
-                     TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                       (1|Binomial),data=B_Length_tree,
-                         bayes = TRUE)
-
-
-phylo_lb <- pglmm(LLength ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + Migration +
-                     TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                        (1|Binomial__),data=B_Length_tree, cov_ranef = list(Binomial = treel), 
+Non_phylo_lb <- pglmm(log10(Body_Length) ~ TPI_month_max + AI + HLU +
+                        lifestyle + activity_cycle + Migration +
+                        TPI_month_max:AI + TPI_month_max:HLU +
+                        TPI_month_max:lifestyle + TPI_month_max:Migration +
+                        (1|Binomial),data=B_Length_tree,
                       bayes = TRUE)
 
-sink("Bird_length_nonphylo_and_phylo.txt")
+
+phylo_lb <- pglmm(log10(Body_Length) ~ TPI_month_max + AI + HLU +
+                    lifestyle + activity_cycle + Migration +
+                    TPI_month_max:AI + TPI_month_max:HLU +
+                    TPI_month_max:lifestyle + TPI_month_max:Migration +
+                    (1|Binomial__), data= B_Length_tree, cov_ranef = list(Binomial = bird_tree_length), 
+                  bayes = TRUE)
+
+sink("Bird_length_nonphylo_and_phylo.csv")
 "Non Phylogenetic Model"
 summary(Non_phylo_lb)
 "R squared"
@@ -388,18 +390,22 @@ sink()
 
 ####SIZE ANALYSIS####
 
-Non_phylo_sb <- pglmm(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle +
-                       (1|Binomial)+(1|Season),data=B_Size_tree
-                        ,bayes = TRUE)
+Non_phylo_sb <- pglmm((log10(Mass)/log10(Body_Length)) ~ TPI_month_max + AI + HLU +
+                        lifestyle + activity_cycle + Migration+
+                        TPI_month_max:AI + TPI_month_max:lifestyle+
+                        TPI_month_max:Migration+
+                        (1|Binomial),data=B_Size_tree
+                      ,bayes = TRUE)
 
-phylo_sb <- pglmm(LSize ~ Year_sc + TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle +
-                        (1|Binomial__)+(1|Season), 
-                      data=B_Size_tree, cov_ranef = list(Binomial = trees), 
-                      bayes = TRUE)
+phylo_sb <- pglmm((log10(Mass)/log10(Body_Length))  ~ TPI_month_max + AI + HLU +
+                    lifestyle + activity_cycle + Migration+
+                    TPI_month_max:AI + TPI_month_max:lifestyle+
+                    TPI_month_max:Migration+
+                    (1|Binomial__), 
+                  data=B_Size_tree, cov_ranef = list(Binomial = bird_tree_size), 
+                  bayes = TRUE)
 
-sink("Bird_size_nonphylo_and_phylo.txt")
+sink("Bird_size_nonphylo_and_phylo.csv")
 "Non Phylogenetic Model"
 summary(Non_phylo_sb)
 "R squared"
