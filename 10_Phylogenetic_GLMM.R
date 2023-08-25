@@ -237,9 +237,9 @@ sink()
 
 ###############################BIRD ANALYSIS#############################################
 #change file path to location of datafiles
-B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity >100),100,Aridity))
-B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity >100),100,Aridity))
-B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100),100,Aridity))
+B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity >100,100,Aridity))
+B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity >100,100,Aridity))
+B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100,100,Aridity))
 
 
 ###Factor coding###
@@ -342,7 +342,7 @@ phylo_b <- pglmm(LMass ~ TPI_month_max + AI + HLU +
                    lifestyle + activity_cycle + Migration +
                    TPI_month_max:AI + TPI_month_max:HLU +
                    TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                   (1|Binomial), 
+                   (1|Binomial__), 
                  data=B_Mass_tree, cov_ranef = list(Binomial = bird_tree_mass), 
                  bayes = TRUE)
 
