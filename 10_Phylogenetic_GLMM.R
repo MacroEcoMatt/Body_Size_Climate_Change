@@ -14,7 +14,7 @@ setwd("") #set to where model output files will be stored
 #change file path to location of datafiles
 M_Mass <- vroom("./Data_S4_Mammal_Mass.csv")
 M_Length <- vroom("./Data_S5_Mammal_Length.csv")
-M_Size <- vroom("./Data_S6_Mammal_Size.csv")
+M_Size <- vroom("./Data_S6_Mammal_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100),100,Aridity))
 
 ###Factor coding###
 M_Mass$Season <- as.factor(M_Mass$Season)
@@ -206,14 +206,14 @@ sink()
 
 ####SIZE ANALYSIS####
 
-Non_phylo_s <- pglmm((log10(Mass)/log10(Body_Length)) ~ TPI_month_max + AI + HLU +
+Non_phylo_s <- pglmm(LSize ~ TPI_month_max + AI + HLU +
                        lifestyle + activity_cycle + hibernation_torpor +
                        TPI_month_max:AI + TPI_month_max:HLU +
                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
                        (1|Binomial),data=M_Size_tree
                      ,bayes = TRUE)
 
-phylo_s <- pglmm((log10(Mass)/log10(Body_Length)) ~ TPI_month_max + AI + HLU +
+phylo_s <- pglmm(LSize ~ TPI_month_max + AI + HLU +
                    lifestyle + activity_cycle + hibernation_torpor +
                    TPI_month_max:AI + TPI_month_max:HLU +
                    TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
@@ -237,9 +237,9 @@ sink()
 
 ###############################BIRD ANALYSIS#############################################
 #change file path to location of datafiles
-B_Mass <- vroom("./Data_S1_Bird_Mass.csv")
-B_Length <- vroom("./Data_S2_Bird_Length.csv")
-B_Size <- vroom("./Data_S3_Bird_Size.csv")
+B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity >100),100,Aridity))
+B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity >100),100,Aridity))
+B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100),100,Aridity))
 
 
 ###Factor coding###
@@ -330,7 +330,7 @@ B_Size_tree <- B_Size %>% filter(!Binomial %in% diff_s)
 B_Size_c_tree <- B_Size_c %>% filter(!Binomial %in% diff_s)
 
 ####MASS ANALYSIS####
-Non_phylo_b <- pglmm(log10(Mass) ~ TPI_month_max + AI + HLU +
+Non_phylo_b <- pglmm(LMass ~ TPI_month_max + AI + HLU +
                        lifestyle + activity_cycle + Migration +
                        TPI_month_max:AI + TPI_month_max:HLU +
                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
@@ -338,7 +338,7 @@ Non_phylo_b <- pglmm(log10(Mass) ~ TPI_month_max + AI + HLU +
                      data=B_Mass_tree,
                      bayes = TRUE)
 
-phylo_b <- pglmm(log10(Mass) ~ TPI_month_max + AI + HLU +
+phylo_b <- pglmm(LMass ~ TPI_month_max + AI + HLU +
                    lifestyle + activity_cycle + Migration +
                    TPI_month_max:AI + TPI_month_max:HLU +
                    TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
@@ -360,7 +360,7 @@ print(rr2::R2_pred(phylo_b))
 sink()
 
 ####LENGTH ANALYSIS####
-Non_phylo_lb <- pglmm(log10(Body_Length) ~ TPI_month_max + AI + HLU +
+Non_phylo_lb <- pglmm(LLength ~ TPI_month_max + AI + HLU +
                         lifestyle + activity_cycle + Migration +
                         TPI_month_max:AI + TPI_month_max:HLU +
                         TPI_month_max:lifestyle + TPI_month_max:Migration +
@@ -368,7 +368,7 @@ Non_phylo_lb <- pglmm(log10(Body_Length) ~ TPI_month_max + AI + HLU +
                       bayes = TRUE)
 
 
-phylo_lb <- pglmm(log10(Body_Length) ~ TPI_month_max + AI + HLU +
+phylo_lb <- pglmm(LLength ~ TPI_month_max + AI + HLU +
                     lifestyle + activity_cycle + Migration +
                     TPI_month_max:AI + TPI_month_max:HLU +
                     TPI_month_max:lifestyle + TPI_month_max:Migration +
@@ -390,14 +390,14 @@ sink()
 
 ####SIZE ANALYSIS####
 
-Non_phylo_sb <- pglmm((log10(Mass)/log10(Body_Length)) ~ TPI_month_max + AI + HLU +
+Non_phylo_sb <- pglmm(LSize ~ TPI_month_max + AI + HLU +
                         lifestyle + activity_cycle + Migration+
                         TPI_month_max:AI + TPI_month_max:lifestyle+
                         TPI_month_max:Migration+
                         (1|Binomial),data=B_Size_tree
                       ,bayes = TRUE)
 
-phylo_sb <- pglmm((log10(Mass)/log10(Body_Length))  ~ TPI_month_max + AI + HLU +
+phylo_sb <- pglmm(LSize  ~ TPI_month_max + AI + HLU +
                     lifestyle + activity_cycle + Migration+
                     TPI_month_max:AI + TPI_month_max:lifestyle+
                     TPI_month_max:Migration+
