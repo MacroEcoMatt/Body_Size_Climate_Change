@@ -13,8 +13,8 @@ setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
 M_Mass <- vroom("./Data_S4_Mammal_Mass.csv")
-M_Length <- vroom("./Data_S5_Mammal_Length.csv")%>%filter(AI<75)
-M_Size <- vroom("./Data_S6_Mammal_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100),100,Aridity))%>%filter(AI<75)
+M_Length <- vroom("./Data_S5_Mammal_Length.csv")
+M_Size <- vroom("./Data_S6_Mammal_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100),100,Aridity))
 
 ###Factor coding###
 M_Mass$Season <- as.factor(M_Mass$Season)
@@ -238,8 +238,8 @@ sink()
 ###############################BIRD ANALYSIS#############################################
 #change file path to location of datafiles
 B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity >100,100,Aridity))
-B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity >100,100,Aridity))
-B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100,100,Aridity))
+B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity >100,100,Aridity))%>%filter(AI<75)
+B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100,100,Aridity))%>%filter(AI<75)
 
 
 ###Factor coding###
