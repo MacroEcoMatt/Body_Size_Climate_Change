@@ -425,11 +425,12 @@ sp_length_mod_b <- lme(LLength ~ 1,
 plot(Variogram(sp_length_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL LENGTH MODEL
+#AI < 75 set as filter to deal with outlier variable
 length_model_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
                          lifestyle + activity_cycle + Migration +
                          TPI_month_max:AI + TPI_month_max:HLU +
                          TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                         (1|Binomial),data=B_Length,REML=F,
+                         (1|Binomial),data=B_Length%>%filter(AI<75),REML=F,
                        control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 length_model_b_step <- step(length_model_b)
@@ -452,7 +453,7 @@ final_length_model_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
                                lifestyle + activity_cycle + Migration +
                                TPI_month_max:AI + TPI_month_max:HLU +
                                TPI_month_max:lifestyle + TPI_month_max:Migration +
-                               (1|Binomial),data=B_Length,REML=T,
+                               (1|Binomial),data=B_Length%>%filter(AI<75),REML=T,
                              control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
@@ -461,7 +462,7 @@ final_length_model_c_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
                                  lifestyle + activity_cycle + Migration +
                                  TPI_month_max:AI + TPI_month_max:HLU +
                                  TPI_month_max:lifestyle + TPI_month_max:Migration +
-                                 (1|Binomial),data=B_Length_c,REML=T,
+                                 (1|Binomial),data=B_Length_c%>%filter(AI<75),REML=T,
                                control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
@@ -491,11 +492,12 @@ sp_size_mod_b <- lme(LSize ~ 1,
 plot(Variogram(sp_size_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL LENGTH MODEL
+#AI < 75 set as filter to deal with outlier variable
 size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                        lifestyle + activity_cycle + Migration +
                        TPI_month_max:AI + TPI_month_max:HLU +
                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                       (1|Binomial),data=B_Size,REML=F,
+                       (1|Binomial),data=B_Size%>%filter(AI<75),REML=F,
                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
@@ -515,7 +517,7 @@ final_size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                              lifestyle + activity_cycle + Migration+
                              TPI_month_max:AI + TPI_month_max:lifestyle+
                              TPI_month_max:Migration+
-                             (1|Binomial),data=B_Size,REML = T,
+                             (1|Binomial),data=B_Size%>%filter(AI<75),REML = T,
                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #contrast coded complimentary model
@@ -523,7 +525,7 @@ final_size_model_c_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                                lifestyle + activity_cycle + Migration+
                                TPI_month_max:AI + TPI_month_max:lifestyle+
                                TPI_month_max:Migration+
-                               (1|Binomial),data=B_Size_c,REML = T,
+                               (1|Binomial),data=B_Size_c%>%filter(AI<75),REML = T,
                              control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
