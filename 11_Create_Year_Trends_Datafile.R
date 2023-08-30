@@ -311,8 +311,8 @@ write.csv(size_yr_final, "./Mam_Year_Trends_size.csv")
 
 ###############BIRDS#######################################
 B_Mass <- vroom("./Data_S1_Bird_Mass_Official.csv")%>%mutate(LMass = log10(Mass))
-B_Length <- vroom("./Data_S2_Bird_Length_Official.csv")%>%mutate(LLength = log10(Body_Length))
-B_Size <- vroom("./Data_S3_Bird_Size_Official.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))
+B_Length <- vroom("./Data_S2_Bird_Length_Official.csv")%>%mutate(LLength = log10(Body_Length))%>%filter(AI<75)
+B_Size <- vroom("./Data_S3_Bird_Size_Official.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))%>%filter(AI<75)
 
 
 ####year
