@@ -324,11 +324,29 @@ print(MuMIn::r.squaredGLMM(final_size_modelml_c))
 sink()
 ###############################BIRD ANALYSIS#############################################
 #change file path to location of datafiles
-B_Mass <- vroom("./Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
-B_Length <- vroom("./Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
-B_Size <- vroom("./Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity>100,100,Aridity))
+B_Mass <- vroom("./Bird_Mass_Official.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
+B_Length <- vroom("./Bird_Length_Official.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
+B_Size <- vroom("./Bird_Size_Official.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity>100,100,Aridity))
 
 
+B_Mass_out$lifestyle <- as.factor(B_Mass_out$lifestyle)
+contrasts(B_Mass_out$lifestyle) = contr.sum(5)
+B_Mass_out$Migration <- as.factor(B_Mass_out$Migration)
+contrasts(B_Mass_out$Migration) = contr.sum(3)
+B_Mass_out$activity_cycle <- as.factor(B_Mass_out$activity_cycle)
+contrasts(B_Mass_out$activity_cycle) = contr.sum(2)
+B_Length_out$lifestyle <- as.factor(B_Length_out$lifestyle)
+contrasts(B_Length_out$lifestyle) = contr.sum(5)
+B_Length_out$Migration <- as.factor(B_Length_out$Migration)
+contrasts(B_Length_out$Migration) = contr.sum(3)
+B_Length_out$activity_cycle <- as.factor(B_Length_out$activity_cycle)
+contrasts(B_Length_out$activity_cycle) = contr.sum(2)
+B_Size_out$lifestyle <- as.factor(B_Size_out$lifestyle)
+contrasts(B_Size_out$lifestyle) = contr.sum(5)
+B_Size_out$Migration <- as.factor(B_Size_out$Migration)
+contrasts(B_Size_out$Migration) = contr.sum(3)
+B_Size_out$activity_cycle <- as.factor(B_Size_out$activity_cycle)
+contrasts(B_Size_out$activity_cycle) = contr.sum(2)
 ###Factor coding###
 B_Mass$Season <- as.factor(B_Mass$Season)
 B_Size$Season <- as.factor(B_Size$Season)
@@ -380,6 +398,34 @@ contrasts(B_Size_c$Migration) = contr.sum(3)
 B_Size_c$activity_cycle <- factor(as.character(B_Size_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
 contrasts(B_Size_c$activity_cycle) = contr.sum(2)
 
+###check for influence of extreme AI values####
+#use to build model with winsorized extreme values
+#If model results differ use winsorized model
+nrow(B_Mass%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(B_Mass)
+nrow(B_Length%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(B_Length)
+nrow(B_Size%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(B_Size)
+
+B_Mass2 <- B_Mass %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
+B_Length2 <- B_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
+B_Size2 <- B_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))
+####for models that are different 
+B_Length_c2 <- B_Length2
+B_Size_c2 <- B_Size2
+
+B_Length_c2$lifestyle <- factor(as.character(B_Length_c2$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist") )
+contrasts(B_Length_c2$lifestyle) = contr.sum(5)
+B_Length_c2$Migration <- factor(as.character(B_Length_c2$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
+contrasts(B_Length_c2$Migration) = contr.sum(3)
+B_Length_c2$activity_cycle <- factor(as.character(B_Length_c2$activity_cycle), levels =c("Nocturnal", "Diurnal"))
+contrasts(B_Length_c2$activity_cycle) = contr.sum(2)
+
+B_Size_c2$lifestyle <- factor(as.character(B_Size_c2$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist"))
+contrasts(B_Size_c2$lifestyle) = contr.sum(5)
+B_Size_c2$Migration <- factor(as.character(B_Size_c2$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
+contrasts(B_Size_c2$Migration) = contr.sum(3)
+B_Size_c2$activity_cycle <- factor(as.character(B_Size_c2$activity_cycle), levels =c("Nocturnal", "Diurnal"))
+contrasts(B_Size_c2$activity_cycle) = contr.sum(2)
+
 ####MASS ANALYSIS####
 
 #spatial variogram
@@ -395,6 +441,15 @@ mass_model_b <- lmer(LMass ~ TPI_month_max + AI + HLU +
                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
                        (1|Binomial),data=B_Mass, REML=F,
                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+
+mass_model_b_2 <- lmer(LMass ~ TPI_month_max + AI_win + HLU +
+                            lifestyle + activity_cycle + Migration +
+                            TPI_month_max:AI_win + TPI_month_max:HLU +
+                            TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
+                            (1|Binomial),data=B_Mass2, REML=F,
+                          control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+tab_model(mass_model_b,mass_model_b_2)
+#no difference continue with mass model
 
 mass_model_b_step <- step(mass_model_b)
 plot(mass_model_b_step)
@@ -453,25 +508,32 @@ sp_length_mod_b <- lme(LLength ~ 1,
 plot(Variogram(sp_length_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL LENGTH MODEL
-#AI < 75 set as filter to deal with outlier variable
 length_model_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
                          lifestyle + activity_cycle + Migration +
                          TPI_month_max:AI + TPI_month_max:HLU +
                          TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                         (1|Binomial),data=B_Length%>%filter(AI<75),REML=F,
+                         (1|Binomial),data=B_Length,REML=F,
                        control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+length_model_b_2 <- lmer(LLength ~ TPI_month_max + AI_win + HLU +
+                              lifestyle + activity_cycle + Migration +
+                              TPI_month_max:AI_win + TPI_month_max:HLU +
+                              TPI_month_max:lifestyle + TPI_month_max:Migration +
+                              (1|Binomial),data=B_Length2,REML=T,
+                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+tab_model(length_model_b, length_model_b_2)
+#DIFFERENCE - extreme AIs overly influence model, continue with length_model_b_2
 
-length_model_b_step <- step(length_model_b)
+length_model_b_step <- step(length_model_b_2)
 plot(length_model_b_step)
 length_model_b_step_top <- get_model(length_model_b_step)
 
-AIC(length_model_b,length_model_b_step_top)
+AIC(length_model_b_2,length_model_b_step_top)
 
-tab_model(length_model_b,length_model_b_step_top, digits=5)
+tab_model(length_model_b_2,length_model_b_step_top, digits=5)
 
 #collect coef for figure generation
 coef_length <- coef(summary(length_model_b_step_top))
-write.csv(coef_length, "./Figure Generation/Bird_Length_coef.csv")
+write.csv(coef_length, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Bird_Length_coef.csv")
 
 
 #after step wise removal based on AIC and BIC
@@ -481,7 +543,7 @@ final_length_model_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
                                lifestyle + activity_cycle + Migration +
                                TPI_month_max:AI + TPI_month_max:HLU +
                                TPI_month_max:lifestyle + TPI_month_max:Migration +
-                               (1|Binomial),data=B_Length%>%filter(AI<75),REML=T,
+                               (1|Binomial),data=B_Length2,REML=T,
                              control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
@@ -490,16 +552,16 @@ final_length_model_c_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
                                  lifestyle + activity_cycle + Migration +
                                  TPI_month_max:AI + TPI_month_max:HLU +
                                  TPI_month_max:lifestyle + TPI_month_max:Migration +
-                                 (1|Binomial),data=B_Length_c%>%filter(AI<75),REML=T,
+                                 (1|Binomial),data=B_Length_c2,REML=T,
                                control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
 performance::check_singularity(final_length_model_b)
 performance::check_model(final_length_model_b)
 
-tab_model(final_length_model_b,final_length_model_c_b, digits=5, file = "./Results/Bird_Length_Results.html")
+tab_model(final_length_model_b,final_length_model_c_b, digits=5, file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter//Results/Bird_Length_Results.html")
 
-sink("./Results/Bird_length_LME.txt")
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter//Results/Bird_length_LME.txt")
 "Bird Length Model LME"
 summary(final_length_model_b)
 "R squared"
@@ -525,44 +587,52 @@ size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                        lifestyle + activity_cycle + Migration +
                        TPI_month_max:AI + TPI_month_max:HLU +
                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                       (1|Binomial),data=B_Size%>%filter(AI<75),REML=F,
+                       (1|Binomial),data=B_Size,REML=F,
                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+size_model_b_2 <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
+                            lifestyle + activity_cycle + Migration+
+                            TPI_month_max:AI_win + TPI_month_max:HLU+
+                            TPI_month_max:lifestyle+ TPI_month_max:Migration+ TPI_month_max:activity_cycle+
+                            (1|Binomial),data=B_Size2,REML = T,
+                          control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
+tab_model(size_model_b,size_model_b_2,digits=4)
+#DIFFERENCE - continue with size_model_b_2
 
-size_model_b_step <- step(size_model_b)
+size_model_b_step <- step(size_model_b_2)
 plot(size_model_b_step)
 size_model_b_step_top <- get_model(size_model_b_step)
-AIC(size_model_b,size_model_b_step_top)
-tab_model(size_model_b,size_model_b_step_top, digits=5)
+AIC(size_model_b_2,size_model_b_step_top)
+tab_model(size_model_b_2,size_model_b_step_top, digits=5)
 
 #collect coef for figure generation
 coef_size <- coef(summary(size_model_b_step_top))
-write.csv(coef_size, "./Figure Generation/Bird_Size_coef.csv")
+write.csv(coef_size, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Bird_Size_coef.csv")
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
 final_size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                              lifestyle + activity_cycle + Migration+
-                             TPI_month_max:AI + TPI_month_max:lifestyle+
+                             TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
                              TPI_month_max:Migration+
-                             (1|Binomial),data=B_Size%>%filter(AI<75),REML = T,
+                             (1|Binomial),data=B_Size2,REML = T,
                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #contrast coded complimentary model
 final_size_model_c_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                                lifestyle + activity_cycle + Migration+
-                               TPI_month_max:AI + TPI_month_max:lifestyle+
+                               TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
                                TPI_month_max:Migration+
-                               (1|Binomial),data=B_Size_c%>%filter(AI<75),REML = T,
+                               (1|Binomial),data=B_Size_c2,REML = T,
                              control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
 check_singularity(final_size_model_b)
 check_model(final_size_model_b)
 
-tab_model(final_size_model_b,final_size_model_c_b, digits=5, file = "./Results/Bird_Size_Results.html")
+tab_model(final_size_model_b,final_size_model_c_b, digits=5, file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Bird_Size_Results.html")
 
-sink("./Results/Bird_size_smi_LME.txt")
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Bird_size_smi_LME.txt")
 "Bird Size Model LME"
 summary(final_size_model_b)
 "R squared"
@@ -574,3 +644,4 @@ summary(final_size_model_c_b)
 "R squared"
 print(MuMIn::r.squaredGLMM(final_size_model_c_b))
 sink()
+
