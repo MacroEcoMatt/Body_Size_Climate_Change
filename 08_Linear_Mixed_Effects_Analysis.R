@@ -16,9 +16,18 @@ library(performance)
 setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
-M_Mass <- vroom("./Mammal_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
-M_Length <- vroom("./Mammal_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
-M_Size <- vroom("./Mammal_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity>100,100,Aridity))
+M_Mass <- vroom("./Mammal_Mass.csv")
+M_Mass <- M_Mass%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
+M_Length <- vroom("./Mammal_Length.csv")
+M_Length <- M_Length %>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
+M_Size <- vroom("./Mammal_Size.csv")
+M_Size <-M_Size%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity>100,100,Aridity))
+
+bt <- vroom("F:/Body Size Chapter/Chapter 2 Validation/Extra files for process/Mammal traits.csv")
+bt <- bt%>%distinct()
+M_Mass <- M_Mass %>%left_join(bt)%>%filter(!lifestyle=="Scansorial")
+M_Length <- M_Length %>%left_join(bt)%>%filter(!lifestyle=="Scansorial")
+M_Size <- M_Size %>%left_join(bt)%>%filter(!lifestyle=="Scansorial")
 
 
 ###Factor coding###
@@ -73,12 +82,22 @@ contrasts(M_Size_c$hibernation_torpor) = contr.sum(2)
 M_Size_c$activity_cycle <- factor(as.character(M_Size_c$activity_cycle), levels =c("All","Nocturnal", "Diurnal"))
 contrasts(M_Size_c$activity_cycle) = contr.sum(3)
 
+###check for influence of extreme AI values####
+#use to build model with winsorized extreme values
+#If model results differ use winsorized model
+nrow(M_Mass%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(M_Mass)
+nrow(M_Length%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(M_Length)
+nrow(M_Size%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(M_Size)
+
+M_Mass2 <- M_Mass %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
+M_Length2 <- M_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
+M_Size2 <- M_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.009,0.991)))
 ####MASS ANALYSIS####
 
 #spatial variogram
 sp_mass_mod <- lme(LMass ~ 1,
-           random = ~1|Binomial, 
-           data= M_Mass)
+                   random = ~1|Binomial, 
+                   data= M_Mass)
 plot(Variogram(sp_mass_mod, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL MASS MODEL
@@ -88,7 +107,14 @@ mass_model <- lmer(LMass ~ TPI_month_max + AI + HLU +
                      TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
                      (1|Binomial),data=M_Mass,REML=F)
 
-mass_model_step <- step(mass_model)
+mass_model_winsor <- lmer(LMass ~ TPI_month_max + AI_win + HLU +
+                              lifestyle + activity_cycle + hibernation_torpor +
+                              TPI_month_max:AI_win + TPI_month_max:HLU +
+                              TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                              (1|Binomial),data=M_Mass2)
+tab_model(mass_model,mass_model_winsor)
+#no change to results significance - continue with mass_model
+mass_model_step <- step(mass_model,direction="backward")
 
 mass_model_step_top <- get_model(mass_model_step)
 
@@ -96,9 +122,10 @@ AIC(mass_model,mass_model_step_top)
 
 tab_model(mass_model,mass_model_step_top, digits=5)
 
+check_model(mass_model)
 #collect coef for figure generation
 coef_mass <- coef(summary(mass_model_step_top))
-write.csv(coef_mass, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Mam_Mass_coef.csv")
+write.csv(coef_mass, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Mam_Mass_API_coef.csv")
 
 #after step wise removal based on AIC and BIC
 #FINAL MASS MODEL
@@ -108,6 +135,7 @@ final_mass_model <- lmer(LMass ~ TPI_month_max + AI + HLU +
                            TPI_month_max:AI + TPI_month_max:HLU +
                            TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
                            (1|Binomial),data=M_Mass)
+tab_model(final_mass_model, digits=5)
 
 #contrast coded complimentary model
 final_mass_model_c <- lmer(LMass ~ TPI_month_max + AI + HLU +
@@ -144,7 +172,7 @@ sp_length_mod <- lme(LLength ~ 1,
                      random = ~1|Binomial, 
                      data= M_Length)
 plot(Variogram(sp_length_mod, form=~Lat+Lon|Binomial, maxDist = 5))
-
+mlm <- M_Length%>%filter(!is.na(API))
 #FULL LENGTH MODEL
 length_model <- lmer(LLength ~ TPI_month_max + AI + HLU +
                        lifestyle + activity_cycle + hibernation_torpor +
@@ -153,17 +181,24 @@ length_model <- lmer(LLength ~ TPI_month_max + AI + HLU +
                        (1|Binomial),data=M_Length,REML = F,
                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
+length_model_winsor<- lmer(LLength ~ TPI_month_max + AI_win + HLU +
+                              lifestyle + activity_cycle + hibernation_torpor +
+                              TPI_month_max:AI_win + TPI_month_max:HLU +
+                              TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                              (1|Binomial),data=M_Length2,REML = F,
+                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+tab_model(length_model,length_model_winsor)
+#no difference continue with length_model
 length_model_step <- step(length_model)
 
 length_model_step_top <- get_model(length_model_step)
 
 AIC(length_model,length_model_step_top)
-
 tab_model(length_model,length_model_step_top, digits=5)
 
 #collect coef for figure generation
 coef_length <- coef(summary(length_model_step_top))
-write.csv(coef_length, "./Figure Generation/Mam_Length_coef.csv")
+write.csv(coef_length, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Mam_Length_coef.csv")
 
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
@@ -217,20 +252,26 @@ plot(Variogram(sp_size_mod, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL MASS:LENGTH MODEL
 
-size_model_ml <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
-                     TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial),data=M_Size2, REML=F,
-                   control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+size_model <- lmer(LSize ~ TPI_month_max + AI + HLU +
+                        lifestyle + activity_cycle + hibernation_torpor +
+                        TPI_month_max:AI + TPI_month_max:HLU +
+                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                        (1|Binomial),data=M_Size, REML=F,
+                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-
+size_model_2 <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
+                            lifestyle + activity_cycle + hibernation_torpor +
+                            TPI_month_max:AI_win + TPI_month_max:HLU +
+                            TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                            (1|Binomial),data=M_Size2, REML=T,
+                          control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+tab_model(size_model,size_model_2)
+#no difference continue with size_model
 ml_step <- step(size_model_ml)
-
 
 ml_top <- get_model(ml_step)
 
-tab_model(ml_top, digits = 5)
+tab_model(size_model_ml,ml_top, digits = 5)
 
 AIC(ml_top)
 
@@ -244,44 +285,32 @@ write.csv(coef_size_size, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Siz
 #FINAL MASS:LENGTH MODEL
 
 #contrast coded complimentary model
-final_size_modelml <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                              lifestyle + activity_cycle + hibernation_torpor +
-                              TPI_month_max:AI + TPI_month_max:HLU +
-                              TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                              (1|Binomial),data=M_Size, REML=T,
-                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-final_size_modelml_c <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                                lifestyle + activity_cycle + hibernation_torpor +
-                                TPI_month_max:AI + TPI_month_max:HLU +
-                                TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                                (1|Binomial),data=M_Size_c, REML=T,
-                              control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+final_size_mode <- lmer(LSize ~ TPI_month_max + AI + HLU +
+                             lifestyle + activity_cycle + hibernation_torpor +
+                             TPI_month_max:AI + TPI_month_max:HLU +
+                             TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                             (1|Binomial),data=M_Size, REML=T,
+                           control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+final_size_mode_c <- lmer(LSize ~ TPI_month_max + AI + HLU +
+                               lifestyle + activity_cycle + hibernation_torpor +
+                               TPI_month_max:AI + TPI_month_max:HLU +
+                               TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+                               (1|Binomial),data=M_Size_c, REML=T,
+                             control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
-check_singularity(final_size_modelsmi)
-check_outliers(final_size_modelsmi)
+check_singularity(final_size_mode)
+check_outliers(final_size_mode)
 
-qqnorm(residuals(final_size_modelsmi))
-plot(final_size_modelsmi)
+qqnorm(residuals(final_size_mode))
+plot(final_size_mode)
 
-check_model(final_size_model)
+check_model(final_size_mode)
 
-tab_model(final_size_modelsmi,final_size_modelsmi_c, digits=5, 
+tab_model(final_size_mode,final_size_mode_c, digits=5, 
           file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_SMI_Results.html")
-tab_model(final_size_modelml,final_size_modelml_c, digits=5, 
-          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_Size_Results.html")
 
 sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_size_LME.txt")
-"Mammal SMI Model LME"
-summary(final_size_modelsmi)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_size_modelsmi))
-""
-""
-"Contrast"
-summary(final_size_modelsmi_c)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_size_modelsmi_c))
 "Mammal SIZE Model LME"
 summary(final_size_modelml)
 "R squared"
@@ -293,7 +322,6 @@ summary(final_size_modelml_c)
 "R squared"
 print(MuMIn::r.squaredGLMM(final_size_modelml_c))
 sink()
-
 ###############################BIRD ANALYSIS#############################################
 #change file path to location of datafiles
 B_Mass <- vroom("./Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
