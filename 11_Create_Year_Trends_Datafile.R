@@ -17,9 +17,9 @@ setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
 #MAMMALS
-M_Mass <- read.csv("./Data_S4_Mammal_Mass_Official.csv")
-M_Length <- read.csv("./Data_S5_Mammal_Length_Official.csv")
-M_Size<- read.csv("./Data_S6_Mammal_Size_Official3.csv")
+M_Mass <- read.csv("./Data_S4_Mammal_Mass.csv")
+M_Length <- read.csv("./Data_S5_Mammal_Length.csv")
+M_Size<- read.csv("./Data_S6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))
 
 ####year
 #do lmer model with random slope and int
@@ -34,7 +34,7 @@ length_lme <- lmer(LLength ~ Year_sc + (Year_sc|Binomial),data=M_Length,REML=F,
 
 tab_model(length_lme, digits=5, file="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mam_length_year_model.html")
 
-size_lme <- lmer(LSize ~ Year_sc + (Year_sc|Binomial),data=M_Size2,REML=F,
+size_lme <- lmer(LSize ~ Year_sc + (Year_sc|Binomial),data=M_Size,REML=F,
                  control = lmerControl(calc.derivs = FALSE))
 
 tab_model(size_lme, digits=5, file="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mam_size_year_model.html")
@@ -66,7 +66,7 @@ length_year <- M_Length %>%
 length_year_sig <- length_year %>% filter(term=="Year_sc" & !is.na(p.value))%>%
   mutate(siglevel = ifelse(p.value <0.05, "Sig","Not Sig"))
 
-size_year <- M_Size2 %>%
+size_year <- M_Size %>%
   group_by(Binomial) %>%
   summarise(model = list(broom::tidy(lm(LSize ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)
@@ -160,10 +160,10 @@ tpicorl <- left_join(tpi_year_lml, tpi_yearl)
 colnames(tpicorl)[c(3,7)] <- c("TPI_trend","TPI_sig")
 tpicorl <- tpicorl[,c(1,3,7,8)]
 
-tpi_years <-  M_Size2 %>% group_by(Binomial) %>%
+tpi_years <-  M_Size %>% group_by(Binomial) %>%
   summarise(cor(Year_sc, TPI_month_max, method = "pearson"))
 colnames(tpi_years)[2] <- "TPIcor"
-tpi_year_lms <- M_Size2 %>%
+tpi_year_lms <- M_Size %>%
   group_by(Binomial) %>%
   summarise(model = list(broom::tidy(lm(TPI_month_max ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
@@ -200,15 +200,14 @@ aicorl <- left_join(ai_year_lml, ai_yearl)
 colnames(aicorl)[c(3,7)] <- c("AI_trend","AI_sig")
 aicorl <- aicorl[,c(1,3,7,8)]
 
-ai_years <-  M_Size2 %>% group_by(Binomial) %>%
+ai_years <-  M_Size %>% group_by(Binomial) %>%
   summarise(cor(Year_sc, AI, method = "pearson"))
 colnames(ai_years)[2] <- "AIcor"
-ai_year_lms <- M_Size2 %>%
+ai_year_lms <- M_Size %>%
   group_by(Binomial) %>%
   summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
-ai_year_lms <- rbind(ai_year_lms, ai_year_lmes)
 ai_year_lms <- ai_year_lms %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicors <- left_join(ai_year_lms, ai_years)
 colnames(aicors)[c(3,7)] <- c("AI_trend","AI_sig")
@@ -241,10 +240,10 @@ hlucorl <- left_join(hlu_year_lml, hlu_yearl)
 colnames(hlucorl)[c(3,7)] <- c("HLU_trend","HLU_sig")
 hlucorl <- hlucorl[,c(1,3,7,8)]
 
-hlu_years <- M_Size2 %>% group_by(Binomial) %>%
+hlu_years <- M_Size %>% group_by(Binomial) %>%
   summarise(cor(Year_sc, HLU, method = "pearson"))
 colnames(hlu_years)[2] <- "HLUcor"
-hlu_year_lms <- M_Size2 %>%
+hlu_year_lms <- M_Size %>%
   group_by(Binomial) %>%
   summarise(model = list(broom::tidy(lm(HLU ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
@@ -310,16 +309,17 @@ size_yr_final_mam <- size_yr_final[,-c(1,2)]
 write.csv(size_yr_final, "./Mam_Year_Trends_size.csv")
 
 ###############BIRDS#######################################
-B_Mass <- vroom("./Data_S1_Bird_Mass_Official.csv")%>%mutate(LMass = log10(Mass))
-B_Length <- vroom("./Data_S2_Bird_Length_Official.csv")%>%mutate(LLength = log10(Body_Length))%>%filter(AI<75)
-B_Size <- vroom("./Data_S3_Bird_Size_Official.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))%>%filter(AI<75)
+B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass))
+B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length))%>%filter(AI<75)
+B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))%>%filter(AI<75)
 
-
+B_Length <- B_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
+B_Size <-  B_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))
 ####year
 #do lmer model with random slope and int
 mass_lme <- lmer(log10(Mass) ~ Year_sc + (Year_sc|Binomial),data=B_Mass, REML=F,
                  control = lmerControl(calc.derivs = FALSE))
-                 
+
 tab_model(mass_lme, digits=5, file="./Results/Bird_mass_year_model.html")
 
 length_lme <- lmer(log10(Body_Length) ~ Year_sc + (Year_sc|Binomial),data=B_Length,REML=F,
@@ -480,11 +480,11 @@ colnames(aicor)[c(3,7)] <- c("AI_trend","AI_sig")
 aicor <- aicor[,c(1,3,7,8)]
 
 ai_yearl <-  B_Length %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI, method = "pearson"))
+  summarise(cor(Year_sc, AI_win, method = "pearson"))
 colnames(ai_yearl)[2] <- "AIcor"
 ai_year_lml <- B_Length %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(AI_win ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lml <- ai_year_lml %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
@@ -493,11 +493,11 @@ colnames(aicorl)[c(3,7)] <- c("AI_trend","AI_sig")
 aicorl <- aicorl[,c(1,3,7,8)]
 
 ai_years <-  B_Size %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI, method = "pearson"))
+  summarise(cor(Year_sc, AI_win, method = "pearson"))
 colnames(ai_years)[2] <- "AIcor"
 ai_year_lms <- B_Size %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(AI_win ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lms <- ai_year_lms %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
