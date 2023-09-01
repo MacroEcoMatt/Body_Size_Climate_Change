@@ -645,3 +645,245 @@ summary(final_size_model_c_b)
 print(MuMIn::r.squaredGLMM(final_size_model_c_b))
 sink()
 
+#####FIGURE GENERATION######
+##Bird Response and Mammal Response to tpi by trait####
+#BIRD####
+#MASS
+tpi_bird_life <- ggpredict(final_mass_model_b, terms=c("TPI_month_max","lifestyle"))
+tpi1 <- plot(tpi_bird_life, colors=c("darkorange2","steelblue1", "forestgreen","maroon2", "saddlebrown"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Mass (g)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_bird_ac <- ggpredict(final_mass_model_b, terms=c("TPI_month_max","activity_cycle"))
+ac1<- plot(tpi_bird_ac, colors=c("goldenrod2", "black"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body  Mass (g)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+ac1
+tpi_bird_ht <- ggpredict(final_mass_model_b, terms=c("TPI_month_max","Migration"))
+h1<- plot(tpi_bird_ht, colors=c("orangered3","royalblue3","grey30"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body  Mass (g)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+
+tpi_bird_life2 <- ggpredict(final_length_model_b, terms=c("TPI_month_max","lifestyle"))
+tpi2 <- plot(tpi_bird_life2, colors=c("darkorange2","steelblue1", "forestgreen","maroon2", "saddlebrown"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Length (mm)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_bird_ac2 <- ggpredict(final_length_model_b, terms=c("TPI_month_max","activity_cycle"))
+ac2<- plot(tpi_bird_ac2, colors=c("goldenrod2", "black"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Length (mm)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_bird_ht2 <- ggpredict(final_length_model_b, terms=c("TPI_month_max","Migration"))
+m2<- plot(tpi_bird_ht2, colors=c("orangered3","royalblue3","grey30"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Length (mm)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+
+tpi_bird_life3 <- ggpredict(final_size_model_b, terms=c("TPI_month_max","lifestyle"))
+tpi3 <- plot(tpi_bird_life3, colors=c("darkorange2","steelblue1", "forestgreen","maroon2", "saddlebrown"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Mass:Length (g/mm)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_bird_ac3 <- ggpredict(final_size_model_b, terms=c("TPI_month_max","activity_cycle"))
+ac3<- plot(tpi_bird_ac3, colors=c("goldenrod2", "black"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Mass:Length (g/mm)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_bird_ht3 <- ggpredict(final_size_model_b, terms=c("TPI_month_max","Migration"))
+m3<- plot(tpi_bird_ht3, colors=c("orangered3","royalblue3","grey30"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Mass:Length (g/mm)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+life_bird <- ggpubr::ggarrange(tpi1, tpi2,tpi3,
+                  labels = c("A", "B", "C"),
+                  ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+life_bird
+
+ac_bird <- ggpubr::ggarrange( ac1,ac3,
+                               labels = c("A","B"),
+                               ncol = 2, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+
+ac_bird
+m_bird <- ggpubr::ggarrange(h1, m2,m3,
+                               labels = c("A", "B", "C"),
+                               ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+
+m_bird
+##MAMMAL####
+#MASS
+
+tpi_mam_life <- ggpredict(final_mass_model, terms=c("TPI_month_max","lifestyle"))
+tpi4<-plot(tpi_mam_life, colors=c("darkorange2", "forestgreen", "saddlebrown"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Mass (g)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_mam_ac <- ggpredict(final_mass_model, terms=c("TPI_month_max","activity_cycle"))
+ac4<-plot(tpi_mam_ac, colors=c("mediumpurple1","goldenrod2", "black"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Mass (g)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_mam_ht <- ggpredict(final_mass_model, terms=c("TPI_month_max","hibernation_torpor"))
+h4<-plot(tpi_mam_ht, colors=c("turquoise3","tan"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Mass (g)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+
+tpi_mam_life <- ggpredict(final_length_model, terms=c("TPI_month_max","lifestyle"))
+tpi5<-plot(tpi_mam_life, colors=c("darkorange2", "forestgreen", "saddlebrown"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Length (mm)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_mam_ac <- ggpredict(final_length_model, terms=c("TPI_month_max","activity_cycle"))
+ac5<-plot(tpi_mam_ac, colors=c("mediumpurple1","goldenrod2", "black"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Length (mm)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_mam_ht <- ggpredict(final_length_model, terms=c("TPI_month_max","hibernation_torpor"))
+h5<-plot(tpi_mam_ht, colors=c("turquoise3","tan"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Log10 Body Length (mm)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+
+tpi_mam_life <- ggpredict(final_size_mode, terms=c("TPI_month_max","lifestyle"))
+tpi6<-plot(tpi_mam_life, colors=c("darkorange2", "forestgreen", "saddlebrown"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Mass:Length (g/mm)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_mam_ac <- ggpredict(final_size_mode, terms=c("TPI_month_max","activity_cycle"))
+ac6<-plot(tpi_mam_ac, colors=c("mediumpurple1","goldenrod2", "black"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Mass:Length (g/mm)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+tpi_mam_ht <- ggpredict(final_size_mode, terms=c("TPI_month_max","hibernation_torpor"))
+h6<- plot(tpi_mam_ht, colors=c("turquoise3","tan"), line.size = 1.3)+
+  labs(x = "Thermal Position Index",
+       y = "Mass:Length (g/mm)",
+       title = "",
+       color="")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+
+life_mam <- ggpubr::ggarrange(tpi4, tpi5,tpi6,
+                               labels = c("A", "B", "C"),
+                               ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+life_mam
+
+ac_mam <- ggpubr::ggarrange( ac4, ac5, ac6,
+                              labels = c("A", "B", "C"),
+                              ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+
+ac_mam
+
+h_mam <- ggpubr::ggarrange(h4, h5,h6,
+                            labels = c("A", "B", "C"),
+                            ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+
+h_mam
