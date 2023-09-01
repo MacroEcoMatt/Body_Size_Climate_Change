@@ -51,6 +51,20 @@ plot((resid_weights$resid*resid_weights$weight),resid_weights$fitted_val)
 hist((resid_weights$resid*resid_weights$weight))
 hist(scale((resid_weights$resid*resid_weights$weight)))
 
+library(ggeffects)
+library(ggiraphExtra)
+massyearplot <- ggpredict(all_mass_lm, terms=c("TPI_trend","Class"))
+tpi_m <- plot(massyearplot, colors=c("chocolate4","cornflowerblue"), line.size = 1.3)+
+  labs(x = "TPI ~ Year (Beta)",
+       y = "Log10 Body Mass (g) ~ Year (Beta)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "none",
+  )
+
 #LENGTH ANALYSIS
 length_year <- Year_data%>%filter(Metric=="Length")
 
@@ -87,6 +101,30 @@ plot((resid_l$resid*resid_l$weight),resid_l$fitted_val)
 hist((resid_l$resid*resid_l$weight))
 hist(scale((resid_l$resid*resid_l$weight)))
 
+lengthyearplot <- ggpredict(all_length_lm, terms=c("TPI_trend","Class"))
+tpi_l <- plot(lengthyearplot, colors=c("chocolate4","cornflowerblue"), line.size = 1.3)+
+  labs(x = "TPI ~ Year (Beta)",
+       y = "Log10 Body Length (mm) ~ Year (Beta)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "none",
+  )
+
+lengthyearplot2 <- ggpredict(all_length_lm, terms=c("HLU_trend","Class"))
+hlu_l <- plot(lengthyearplot2, colors=c("chocolate4","cornflowerblue"), line.size = 1.3)+
+  labs(x = "HLU ~ Year (Beta)",
+       y = "Log10 Body Length (mm) ~ Year (Beta)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+        legend.position = "bottom",
+  )
+hlu_l
 ###SIZE ANALYSIS
 size_year <- Year_data%>%filter(Metric=="Size")
 
@@ -120,6 +158,25 @@ resid_s <- left_join(resid_s,cbs)
 plot((resid_s$resid*resid_s$weight),resid_s$fitted_val)
 hist((resid_s$resid*resid_s$weight))
 hist(scale((resid_s$resid*resid_s$weight)))
+
+sizeyearplot <- ggpredict(all_size_lm, terms=c("TPI_trend","Class"))
+tpi_s <- plot(sizeyearplot, colors=c("chocolate4","cornflowerblue"), line.size = 1.3)+
+  labs(x = "TPI ~ Year (Beta)",
+       y = "Mass:Length ~ Year (Beta)",
+       title = "",
+       color="")+
+  theme(axis.title = element_text(face="bold",size=16, color="black"),
+        axis.text = element_text(size=14, color="black"),
+        legend.text = element_text(color="black",size=12, face="bold"),
+  )
+tpi_s
+year_mass_plots <- ggpubr::ggarrange(tpi_m,tpi_l, tpi_s, 
+                                     labels = c("A", "B", "C"),
+                                     ncol = 3,
+                                     common.legend = T,
+                                     legend="bottom",
+                                     label.y = 0.99)
+year_mass_plots
 
 #####OUTPUT
 tab_model(all_mass_lm, all_length_lm, all_size_lmf, digits=5,
