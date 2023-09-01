@@ -241,7 +241,8 @@ B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), AI = if
 B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity >100,100,Aridity))%>%filter(AI<75)
 B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity >100,100,Aridity))%>%filter(AI<75)
 
-
+B_Length <- B_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
+B_Size <-  B_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))
 ###Factor coding###
 B_Mass$Season <- as.factor(B_Mass$Season)
 B_Size$Season <- as.factor(B_Size$Season)
@@ -360,17 +361,17 @@ print(rr2::R2_pred(phylo_b))
 sink()
 
 ####LENGTH ANALYSIS####
-Non_phylo_lb <- pglmm(LLength ~ TPI_month_max + AI + HLU +
+Non_phylo_lb <- pglmm(LLength ~ TPI_month_max + AI_win + HLU +
                         lifestyle + activity_cycle + Migration +
-                        TPI_month_max:AI + TPI_month_max:HLU +
+                        TPI_month_max:AI_win + TPI_month_max:HLU +
                         TPI_month_max:lifestyle + TPI_month_max:Migration +
                         (1|Binomial),data=B_Length_tree,
                       bayes = TRUE)
 
 
-phylo_lb <- pglmm(LLength ~ TPI_month_max + AI + HLU +
+phylo_lb <- pglmm(LLength ~ TPI_month_max + AI_win + HLU +
                     lifestyle + activity_cycle + Migration +
-                    TPI_month_max:AI + TPI_month_max:HLU +
+                    TPI_month_max:AI_win + TPI_month_max:HLU +
                     TPI_month_max:lifestyle + TPI_month_max:Migration +
                     (1|Binomial__), data= B_Length_tree, cov_ranef = list(Binomial = bird_tree_length), 
                   bayes = TRUE)
@@ -392,14 +393,14 @@ sink()
 
 Non_phylo_sb <- pglmm(LSize ~ TPI_month_max + AI + HLU +
                         lifestyle + activity_cycle + Migration+
-                        TPI_month_max:AI + TPI_month_max:lifestyle+
+                        TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
                         TPI_month_max:Migration+
                         (1|Binomial),data=B_Size_tree
                       ,bayes = TRUE)
 
 phylo_sb <- pglmm(LSize  ~ TPI_month_max + AI + HLU +
                     lifestyle + activity_cycle + Migration+
-                    TPI_month_max:AI + TPI_month_max:lifestyle+
+                    TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
                     TPI_month_max:Migration+
                     (1|Binomial__), 
                   data=B_Size_tree, cov_ranef = list(Binomial = bird_tree_size), 
