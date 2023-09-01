@@ -539,18 +539,18 @@ write.csv(coef_length, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size C
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
-final_length_model_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
+final_length_model_b <- lmer(LLength ~ TPI_month_max + AI_win + HLU +
                                lifestyle + activity_cycle + Migration +
-                               TPI_month_max:AI + TPI_month_max:HLU +
+                               TPI_month_max:AI_win + TPI_month_max:HLU +
                                TPI_month_max:lifestyle + TPI_month_max:Migration +
                                (1|Binomial),data=B_Length2,REML=T,
                              control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
 #contrast coded complimentary model
-final_length_model_c_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
+final_length_model_c_b <- lmer(LLength ~ TPI_month_max + AI_win + HLU +
                                  lifestyle + activity_cycle + Migration +
-                                 TPI_month_max:AI + TPI_month_max:HLU +
+                                 TPI_month_max:AI_win + TPI_month_max:HLU +
                                  TPI_month_max:lifestyle + TPI_month_max:Migration +
                                  (1|Binomial),data=B_Length_c2,REML=T,
                                control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
@@ -611,7 +611,7 @@ write.csv(coef_size, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Cha
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
-final_size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
+final_size_model_b <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
                              lifestyle + activity_cycle + Migration+
                              TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
                              TPI_month_max:Migration+
@@ -619,7 +619,7 @@ final_size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 #contrast coded complimentary model
-final_size_model_c_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
+final_size_model_c_b <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
                                lifestyle + activity_cycle + Migration+
                                TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
                                TPI_month_max:Migration+
