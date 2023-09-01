@@ -18,7 +18,7 @@ library(performance)
 setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
-Year_data <- read.csv("ALL_YEAR_DATA.csv"
+Year_data <- read.csv("ALL_YEAR_DATA.csv")
 
 #MASS ANALYSIS
 mass_year <- Year_data%>%filter(Metric=="Mass")
