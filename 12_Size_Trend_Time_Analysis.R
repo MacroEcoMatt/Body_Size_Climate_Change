@@ -14,11 +14,11 @@ library(lmerTest)
 library(ggthemes)
 library(ggplot2)
 library(performance)
-
+library(MASS)
 setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
-Year_data <- read.csv("ALL_YEAR_DATA.csv")
+Year_data <- read.csv("Data_S9_Body_Size_Time_Trend_Data.csv")
 
 #MASS ANALYSIS
 mass_year <- Year_data%>%filter(Metric=="Mass")
@@ -32,7 +32,7 @@ lm_bisqr <- rlm(lm_estimate ~ TPI_trend+AI_trend+HLU_trend+Class,
 
 ####MASSMODEL
 all_mass_lm <- rlm(lm_estimate ~ TPI_trend + AI_trend + HLU_trend+ Class +
-                   TPI_trend:Class + AI_trend:Class + HLU_trend:Class, 
+                     TPI_trend:Class + AI_trend:Class + HLU_trend:Class, 
                    data=mass_year,psi = psi.bisquare)
 step(all_mass_lm)
 all_mass_lm <- rlm(lm_estimate ~ TPI_trend + Class
@@ -50,6 +50,7 @@ resid_weights <- left_join(resid_weights,cb)
 plot((resid_weights$resid*resid_weights$weight),resid_weights$fitted_val)
 hist((resid_weights$resid*resid_weights$weight))
 hist(scale((resid_weights$resid*resid_weights$weight)))
+
 #LENGTH ANALYSIS
 length_year <- Year_data%>%filter(Metric=="Length")
 
@@ -67,10 +68,11 @@ tab_model(l_normal,l_huber,l_bisqr,digits=5)
 all_length_lm <- rlm(lm_estimate ~ TPI_trend+AI_trend+HLU_trend+Class
                      +TPI_trend:Class+AI_trend:Class+HLU_trend:Class, 
                      data=length_year,psi = psi.bisquare)
+
 step(all_length_lm)
 #take best model and create below
-all_length_lm <- rlm(lm_estimate ~ TPI_trend+AI_trend+HLU_trend+Class
-                     +TPI_trend:Class+AI_trend:Class+HLU_trend:Class, 
+all_length_lm <- rlm(lm_estimate ~ TPI_trend+HLU_trend+Class
+                     +TPI_trend:Class+HLU_trend:Class, 
                      data=length_year,psi = psi.bisquare)
 
 tab_model(all_length_lm, digits=5)
@@ -101,17 +103,17 @@ tab_model(s_normal,s_huber,s_bisqr,digits=5)
 
 all_size_lm <- rlm(lm_estimate ~ TPI_trend+AI_trend+HLU_trend+Class
                    +TPI_trend:Class+AI_trend:Class+HLU_trend:Class, 
-                   data=size_year,psi = psi.bisquare)
+                   data=size_year,psi = psi.bisquare, maxit=30)
+
 step(all_size_lm)
 tab_model(all_size_lm, digits=5)
 
-all_size_lm <- rlm(lm_estimate ~ TPI_trend+AI_trend+HLU_trend+Class
-                   +TPI_trend:Class+AI_trend:Class+HLU_trend:Class, 
-                   data=size_year,psi = psi.bisquare)
+all_size_lmf <- rlm(lm_estimate ~ TPI_trend + Class + TPI_trend:Class, 
+                   data=size_year,psi = psi.bisquare, maxit=30)
 
-resid_s <- data.frame(Binomial = size_year$Binomial, resid = all_size_lm$resid, weight = all_size_lm$w)
-resid_s <- resid_s[order(all_size_lm$w),]
-fitted_vals <- fitted(all_size_lm)
+resid_s <- data.frame(Binomial = size_year$Binomial, resid = all_size_lmf$resid, weight = all_size_lmf$w)
+resid_s <- resid_s[order(all_size_lmf$w),]
+fitted_vals <- fitted(all_size_lmf)
 Binomial <- size_year$Binomial
 cbs <- as.data.frame(cbind(Binomial,fitted_vals))
 resid_s <- left_join(resid_s,cbs)
@@ -120,5 +122,5 @@ hist((resid_s$resid*resid_s$weight))
 hist(scale((resid_s$resid*resid_s$weight)))
 
 #####OUTPUT
-tab_model(all_mass_lm, all_length_lm, all_size_lm, digits=5,
+tab_model(all_mass_lm, all_length_lm, all_size_lmf, digits=5,
           file="ALL_YEAR_Results.html")
