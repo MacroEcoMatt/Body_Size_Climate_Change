@@ -1,3 +1,5 @@
+
+###year
 #' ---
 #' Matthew Watson
 #' conducts Linear models and correlations for analysis of body size trends over time
@@ -13,16 +15,23 @@ library(lmerTest)
 library(ggplot2)
 library(ggthemes)
 library(performance)
-setwd("") #set to where model output files will be stored
+setwd("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/A_SUBMISSION_UPDATED/FINAL SUBMISSION/Supplmentary Datafiles for Publication") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
+API <- vroom("C:/Users/matth/OneDrive/Documents/PhD/Thesis/TPI and API/Month_Limits.csv")%>%
+  dplyr::select(Binomial, AMin, AMax, MonthName)%>%
+  rename(Mnth = MonthName)%>%
+  mutate(Mnth = ifelse(Mnth=="Jun", "June",
+                       ifelse(Mnth=="Jul", "July", Mnth)))
 #MAMMALS
-M_Mass <- read.csv("./Data_S4_Mammal_Mass.csv")
-M_Length <- read.csv("./Data_S5_Mammal_Length.csv")
-M_Size<- read.csv("./Data_S6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))
+M_Mass <- read.csv("./Data_S4_Mammal_Mass.csv")%>%left_join(API)%>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
+M_Length <- read.csv("./Data_S5_Mammal_Length.csv")%>%left_join(API)%>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
+M_Size<- read.csv("./Data_S6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))%>%left_join(API)%>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
 
-####year
-#do lmer model with random slope and int
+
 mass_lme <- lmer(LMass ~ Year_sc + (Year_sc|Binomial),data=M_Mass,REML=F,
                  control = lmerControl(optimizer = "optimx", 
                                        calc.derivs = FALSE, 
@@ -175,42 +184,42 @@ tpicors <- tpicors[,c(1,3,7,8)]
 
 #ai by year lm and cor
 ai_year <-  M_Mass %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI, method = "pearson"))
+  summarise(cor(Year_sc, API, method = "pearson"))
 colnames(ai_year)[2] <- "AIcor"
 ai_year_lm <- M_Mass %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(API ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lm <- ai_year_lm %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicor <- left_join(ai_year_lm, ai_year)
-colnames(aicor)[c(3,7)] <- c("AI_trend","AI_sig")
+colnames(aicor)[c(3,7)] <- c("API_trend","API_sig")
 aicor <- aicor[,c(1,3,7,8)]
 
 ai_yearl <-  M_Length %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI, method = "pearson"))
+  summarise(cor(Year_sc, API, method = "pearson"))
 colnames(ai_yearl)[2] <- "AIcor"
 ai_year_lml <- M_Length %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(API ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lml <- ai_year_lml %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicorl <- left_join(ai_year_lml, ai_yearl)
-colnames(aicorl)[c(3,7)] <- c("AI_trend","AI_sig")
+colnames(aicorl)[c(3,7)] <- c("API_trend","API_sig")
 aicorl <- aicorl[,c(1,3,7,8)]
 
 ai_years <-  M_Size %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI, method = "pearson"))
+  summarise(cor(Year_sc, API, method = "pearson"))
 colnames(ai_years)[2] <- "AIcor"
 ai_year_lms <- M_Size %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(API ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lms <- ai_year_lms %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicors <- left_join(ai_year_lms, ai_years)
-colnames(aicors)[c(3,7)] <- c("AI_trend","AI_sig")
+colnames(aicors)[c(3,7)] <- c("API_trend","API_sig")
 aicors <- aicors[,c(1,3,7,8)]
 
 #hlu by year lm and cor
@@ -258,18 +267,18 @@ mass_yr_final<- left_join(mass_yr_final,aicor)
 mass_yr_final <- left_join(mass_yr_final,hlucor)%>%filter(!is.na(HLU_trend))
 
 len_yr_final <- left_join(len_yr_final,tpicorl)%>%filter(!is.na(TPI_trend))
-len_yr_final<- left_join(len_yr_final,aicorl)%>%filter(!is.na(AI_trend))
+len_yr_final<- left_join(len_yr_final,aicorl)%>%filter(!is.na(API_trend))
 len_yr_final <- left_join(len_yr_final,hlucorl)%>%filter(!is.na(HLU_trend))
 
 size_yr_final <- left_join(size_yr_final,tpicors)%>%filter(!is.na(TPI_trend))
-size_yr_final<- left_join(size_yr_final,aicors)%>%filter(!is.na(AI_trend))
+size_yr_final<- left_join(size_yr_final,aicors)%>%filter(!is.na(API_trend))
 size_yr_final <- left_join(size_yr_final,hlucors)%>%filter(!is.na(HLU_trend))
 
 #add absolute corr level
 mass_yr_final <- mass_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
                                                               ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
-                                          water_trend = ifelse(AI_trend > 0 & AIcor > 0 & AI_sig=="Sig", "Wetter",
-                                                               ifelse(AI_trend < 0 & AIcor < 0 & AI_sig =="Sig","Dryer","No Change")),
+                                          water_trend = ifelse(API_trend > 0 & AIcor > 0 & API_sig=="Sig", "Wetter",
+                                                               ifelse(API_trend < 0 & AIcor < 0 & API_sig =="Sig","Dryer","No Change")),
                                           land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
                                                               ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
                                           size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
@@ -279,8 +288,8 @@ mass_yr_final <- mass_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_t
 
 len_yr_final <- len_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
                                                             ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
-                                        water_trend = ifelse(AI_trend > 0 & AIcor > 0 & AI_sig=="Sig", "Wetter",
-                                                             ifelse(AI_trend < 0 & AIcor < 0 & AI_sig =="Sig","Dryer","No Change")),
+                                        water_trend = ifelse(API_trend > 0 & AIcor > 0 & API_sig=="Sig", "Wetter",
+                                                             ifelse(API_trend < 0 & AIcor < 0 & API_sig =="Sig","Dryer","No Change")),
                                         land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
                                                             ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
                                         size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
@@ -290,8 +299,8 @@ len_yr_final <- len_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_tre
 
 size_yr_final <- size_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
                                                               ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
-                                          water_trend = ifelse(AI_trend > 0 & AIcor > 0 & AI_sig=="Sig", "Wetter",
-                                                               ifelse(AI_trend < 0 & AIcor < 0 & AI_sig =="Sig","Dryer","No Change")),
+                                          water_trend = ifelse(API_trend > 0 & AIcor > 0 & API_sig=="Sig", "Wetter",
+                                                               ifelse(API_trend < 0 & AIcor < 0 & API_sig =="Sig","Dryer","No Change")),
                                           land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
                                                               ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
                                           size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
@@ -302,19 +311,32 @@ size_yr_final <- size_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_t
 
 #filter to necessary columns
 mass_yr_final_mam <- mass_yr_final[,-c(1,2)]
-write.csv(mass_yr_final, "./Mam_Year_Trends_mass.csv")
+write.csv(mass_yr_final_mam, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/A_SUBMISSION_UPDATED/Mam_Year_Trends_mass_api.csv")
 len_yr_final_mam <- len_yr_final[,-c(1,2)]
-write.csv(len_yr_final, "./Mam_Year_Trends_length.csv")
+write.csv(len_yr_final_mam, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/A_SUBMISSION_UPDATED/Mam_Year_Trends_length_api.csv")
 size_yr_final_mam <- size_yr_final[,-c(1,2)]
-write.csv(size_yr_final, "./Mam_Year_Trends_size.csv")
+write.csv(size_yr_final_mam, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/A_SUBMISSION_UPDATED/Mam_Year_Trends_size_api.csv")
 
+mass_yr_final_mam <- mass_yr_final_mam %>% mutate(Class ="Mammalia",
+                                                 Metric="Mass")
+len_yr_final_mam <- len_yr_final_mam %>% mutate(Class ="Mammalia",
+                                                  Metric="Length")
+size_yr_final_mam <- size_yr_final_mam %>% mutate(Class ="Mammalia",
+                                                  Metric="Size")
+
+Mammal <- rbind(mass_yr_final_mam,len_yr_final_mam,size_yr_final_mam)
 ###############BIRDS#######################################
-B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass))
-B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length))%>%filter(AI<75)
-B_Size <- vroom("./Data_S3_Bird_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length))%>%filter(AI<75)
+B_Mass <- vroom("./Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass))%>%left_join(API)%>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
+B_Length <- vroom("./Data_S2_Bird_Length.csv")%>%
+  mutate(LLength = log10(Body_Length))%>%filter(AI<75)%>%left_join(API)%>%
+  mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))%>%
+  mutate(API = (AI_win-AMin)/(AMax-AMin))
+B_Size <- vroom("./Data_S3_Bird_Size.csv")%>% 
+  mutate(LSize = log10(Mass)/log10(Body_Length))%>%filter(AI<75)%>%left_join(API)%>%
+  mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))%>%
+  mutate(API = (AI_win-AMin)/(AMax-AMin))
 
-B_Length <- B_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
-B_Size <-  B_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))
 ####year
 #do lmer model with random slope and int
 mass_lme <- lmer(log10(Mass) ~ Year_sc + (Year_sc|Binomial),data=B_Mass, REML=F,
@@ -467,42 +489,42 @@ tpicors <- tpicors[,c(1,3,7,8)]
 
 #ai by year lm and cor
 ai_year <-  B_Mass %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI, method = "pearson"))
+  summarise(cor(Year_sc, API, method = "pearson"))
 colnames(ai_year)[2] <- "AIcor"
 ai_year_lm <- B_Mass %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(API ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lm <- ai_year_lm %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicor <- left_join(ai_year_lm, ai_year)
-colnames(aicor)[c(3,7)] <- c("AI_trend","AI_sig")
+colnames(aicor)[c(3,7)] <- c("API_trend","API_sig")
 aicor <- aicor[,c(1,3,7,8)]
 
 ai_yearl <-  B_Length %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI_win, method = "pearson"))
+  summarise(cor(Year_sc, API, method = "pearson"))
 colnames(ai_yearl)[2] <- "AIcor"
 ai_year_lml <- B_Length %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI_win ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(API ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lml <- ai_year_lml %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicorl <- left_join(ai_year_lml, ai_yearl)
-colnames(aicorl)[c(3,7)] <- c("AI_trend","AI_sig")
+colnames(aicorl)[c(3,7)] <- c("API_trend","API_sig")
 aicorl <- aicorl[,c(1,3,7,8)]
 
 ai_years <-  B_Size %>% group_by(Binomial) %>%
-  summarise(cor(Year_sc, AI_win, method = "pearson"))
+  summarise(cor(Year_sc, API, method = "pearson"))
 colnames(ai_years)[2] <- "AIcor"
 ai_year_lms <- B_Size %>%
   group_by(Binomial) %>%
-  summarise(model = list(broom::tidy(lm(AI_win ~ Year_sc, data = cur_data())))) %>%
+  summarise(model = list(broom::tidy(lm(API ~ Year_sc, data = cur_data())))) %>%
   tidyr::unnest(model)%>%
   filter(term=="Year_sc")
 ai_year_lms <- ai_year_lms %>% mutate(ifelse(p.value<0.05,"Sig","Not Sig"))%>%filter(!is.na(statistic))
 aicors <- left_join(ai_year_lms, ai_years)
-colnames(aicors)[c(3,7)] <- c("AI_trend","AI_sig")
+colnames(aicors)[c(3,7)] <- c("API_trend","API_sig")
 aicors <- aicors[,c(1,3,7,8)]
 
 #hlu by year lm and cor
@@ -549,19 +571,19 @@ mass_yr_final <- left_join(mass_yr_final,tpicor)
 mass_yr_final<- left_join(mass_yr_final,aicor)
 mass_yr_final <- left_join(mass_yr_final,hlucor)%>%filter(!is.na(HLU_trend))
 
-len_yr_final <- left_join(len_yr_final,tpicorl)%>%filter(!is.na(TPI_trend))
-len_yr_final<- left_join(len_yr_final,aicorl)%>%filter(!is.na(AI_trend))
-len_yr_final <- left_join(len_yr_final,hlucorl)%>%filter(!is.na(HLU_trend))
+len_yr_final2 <- left_join(len_yr_final,tpicorl)%>%filter(!is.na(TPI_trend))
+len_yr_final2<- left_join(len_yr_final2,aicorl)%>%filter(!is.na(API_trend))
+len_yr_final2 <- left_join(len_yr_final2,hlucorl)%>%filter(!is.na(HLU_trend))
 
 size_yr_final <- left_join(size_yr_final,tpicors)%>%filter(!is.na(TPI_trend))
-size_yr_final<- left_join(size_yr_final,aicors)%>%filter(!is.na(AI_trend))
+size_yr_final<- left_join(size_yr_final,aicors)%>%filter(!is.na(API_trend))
 size_yr_final <- left_join(size_yr_final,hlucors)%>%filter(!is.na(HLU_trend))
 
 #add absolute corr level
 mass_yr_final <- mass_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
                                                               ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
-                                          water_trend = ifelse(AI_trend > 0 & AIcor > 0 & AI_sig=="Sig", "Wetter",
-                                                               ifelse(AI_trend < 0 & AIcor < 0 & AI_sig =="Sig","Dryer","No Change")),
+                                          water_trend = ifelse(API_trend > 0 & AIcor > 0 & API_sig=="Sig", "Wetter",
+                                                               ifelse(API_trend < 0 & AIcor < 0 & API_sig =="Sig","Dryer","No Change")),
                                           land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
                                                               ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
                                           size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
@@ -569,21 +591,21 @@ mass_yr_final <- mass_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_t
                                           size_trend_lme = ifelse(estimate > 0 & lme_sig=="Sig", "Larger",
                                                                   ifelse(estimate < 0 & lme_sig =="Sig","Smaller","No Change")))
 
-len_yr_final <- len_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
-                                                            ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
-                                        water_trend = ifelse(AI_trend > 0 & AIcor > 0 & AI_sig=="Sig", "Wetter",
-                                                             ifelse(AI_trend < 0 & AIcor < 0 & AI_sig =="Sig","Dryer","No Change")),
-                                        land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
-                                                            ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
-                                        size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
-                                                               ifelse(lm_estimate < 0 & lm_sig =="Sig","Smaller","No Change")),
-                                        size_trend_lme = ifelse(estimate > 0 & lme_sig=="Sig", "Larger",
-                                                                ifelse(estimate < 0 & lme_sig =="Sig","Smaller","No Change")))
+len_yr_final <- len_yr_final2 %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
+                                                             ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
+                                         water_trend = ifelse(API_trend > 0 & AIcor > 0 & API_sig=="Sig", "Wetter",
+                                                              ifelse(API_trend < 0 & AIcor < 0 & API_sig =="Sig","Dryer","No Change")),
+                                         land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
+                                                             ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
+                                         size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
+                                                                ifelse(lm_estimate < 0 & lm_sig =="Sig","Smaller","No Change")),
+                                         size_trend_lme = ifelse(estimate > 0 & lme_sig=="Sig", "Larger",
+                                                                 ifelse(estimate < 0 & lme_sig =="Sig","Smaller","No Change")))
 
 size_yr_final <- size_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_trend > 0 & TPI_sig=="Sig", "Hotter",
                                                               ifelse(TPIcor < 0 & TPI_trend < 0 & TPI_sig =="Sig","Colder","No Change")),
-                                          water_trend = ifelse(AI_trend > 0 & AIcor > 0 & AI_sig=="Sig", "Wetter",
-                                                               ifelse(AI_trend < 0 & AIcor < 0 & AI_sig =="Sig","Dryer","No Change")),
+                                          water_trend = ifelse(API_trend > 0 & AIcor > 0 & API_sig=="Sig", "Wetter",
+                                                               ifelse(API_trend < 0 & AIcor < 0 & API_sig =="Sig","Dryer","No Change")),
                                           land_trend = ifelse(HLU_trend > 0 &HLUcor > 0 & HLU_sig=="Sig", "More Land Use",
                                                               ifelse(HLU_trend < 0 & HLUcor < 0 & HLU_sig =="Sig","Less Land Use","No Change in Land Use")),
                                           size_trend_lm = ifelse(lm_estimate > 0 & lm_sig=="Sig", "Larger",
@@ -594,8 +616,21 @@ size_yr_final <- size_yr_final %>% mutate(temp_trend = ifelse(TPIcor > 0 & TPI_t
 
 #filter to necessary columns
 mass_yr_final_bird <- mass_yr_final[,-c(1,2)]
-write.csv(mass_yr_final, "./Bird_Year_Trends_mass.csv")
+write.csv(mass_yr_final_bird, "./Bird_Year_Trends_mass_api.csv")
 len_yr_final_bird <- len_yr_final[,-c(1,2)]
-write.csv(len_yr_final, "./Bird_Year_Trends_length.csv")
+write.csv(len_yr_final_bird, "./Bird_Year_Trends_length_api.csv")
 size_yr_final_bird <- size_yr_final[,-c(1,2)]
-write.csv(size_yr_final, "./Bird_Year_Trends_size.csv")
+write.csv(size_yr_final_bird, "./Bird_Year_Trends_size_api.csv")
+
+
+mass_yr_final_bird <- mass_yr_final_bird %>% mutate(Class ="Aves",
+                                                  Metric="Mass")
+len_yr_final_bird <- len_yr_final_bird %>% mutate(Class ="Aves",
+                                                Metric="Length")
+size_yr_final_bird <- size_yr_final_bird %>% mutate(Class ="Aves",
+                                                  Metric="Size")
+
+Aves <- rbind(mass_yr_final_bird,len_yr_final_bird,size_yr_final_bird)
+
+allsp <- rbind(Aves,Mammal)
+write.csv(allsp, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data_S9_Body_Size_Time_Trend_Data.csv")
