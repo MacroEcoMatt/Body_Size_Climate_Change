@@ -8,187 +8,109 @@ library(dplyr)
 library(sjmisc)
 library(sjPlot)
 library(nlme)
+library(corrplot)
 library(lme4)
 library(lmerTest)
 library(ggplot2)
 library(ggthemes)
 library(performance)
-setwd("") #set to where model output files will be stored
+setwd("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/For Submisstion/Supplmentary Datafiles for Publication")
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
-M_Mass <- vroom("./Mammal_Mass.csv")
-M_Mass <- M_Mass%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
-M_Length <- vroom("./Mammal_Length.csv")
-M_Length <- M_Length %>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
-M_Size <- vroom("./Mammal_Size.csv")
-M_Size <-M_Size%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity>100,100,Aridity))
+M_Mass <- vroom("Data_S4_Mammal_Mass.csv")%>%mutate(LMass = log10(Mass), 
+                                                      AI = ifelse(Aridity>100,100,Aridity))%>%
+  group_by(Binomial) %>% mutate(S_Mass = (LMass - mean(LMass))/sd(LMass))%>%
+  ungroup()
 
-bt <- vroom("F:/Body Size Chapter/Chapter 2 Validation/Extra files for process/Mammal traits.csv")
-bt <- bt%>%distinct()
-M_Mass <- M_Mass %>%left_join(bt)%>%filter(!lifestyle=="Scansorial")
-M_Length <- M_Length %>%left_join(bt)%>%filter(!lifestyle=="Scansorial")
-M_Size <- M_Size %>%left_join(bt)%>%filter(!lifestyle=="Scansorial")
+M_Length <- vroom("Data_S5_Mammal_Length.csv")%>%mutate(LLength = log10(Body_Length), 
+                                                        AI = ifelse(Aridity>100,100,Aridity))%>%
+  group_by(Binomial) %>% mutate(S_Length = (LLength - mean(LLength))/sd(LLength))%>%
+  ungroup()
 
+M_Size <- vroom("Data_S6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length), 
+                                                      AI = ifelse(Aridity>100,100,Aridity),
+                                                      LLength = log10(Body_Length),
+                                                      LMass = log10(Mass)) %>%
+  group_by(Binomial) %>% mutate(S_Size = (LSize - mean(LSize)) / sd(LSize))%>%
+  ungroup()
 
-###Factor coding###
-M_Mass$Season <- as.factor(M_Mass$Season)
-M_Length$Season <- as.factor(M_Length$Season)
-M_Size$Season <- as.factor(M_Size$Season)
+API <- vroom("C:/Users/matth/OneDrive/Documents/PhD/Thesis/TPI and API/Month_Limits.csv")%>%
+  dplyr::select(Binomial, AMin, AMax, MonthName)%>%
+  rename(Mnth = MonthName)%>%
+  mutate(Mnth = ifelse(Mnth=="Jun", "June",
+                       ifelse(Mnth=="Jul", "July", Mnth)))
 
-M_Mass_c <- M_Mass
-M_Length_c <- M_Length
-M_Size_c <- M_Size
+M_Mass <- left_join(M_Mass,API) %>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
 
-#contrast coding for analysis#
-M_Mass$lifestyle <- as.factor(M_Mass$lifestyle)
-contrasts(M_Mass$lifestyle) = contr.sum(3)
-M_Mass$hibernation_torpor <- as.factor(M_Mass$hibernation_torpor)
-contrasts(M_Mass$hibernation_torpor) = contr.sum(2)
-M_Mass$activity_cycle <- as.factor(M_Mass$activity_cycle)
-contrasts(M_Mass$activity_cycle) = contr.sum(3)
+M_Length <- left_join(M_Length,API) %>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
 
-M_Mass_c$lifestyle <- factor(as.character(M_Mass_c$lifestyle), levels =c("Aerial","Ground", "Arboreal") )
-contrasts(M_Mass_c$lifestyle) = contr.sum(3)
-M_Mass_c$hibernation_torpor <- factor(as.character(M_Mass_c$hibernation_torpor), levels =c("Yes", "No"))
-contrasts(M_Mass_c$hibernation_torpor) = contr.sum(2)
-M_Mass_c$activity_cycle <- factor(as.character(M_Mass_c$activity_cycle), levels =c("All","Nocturnal", "Diurnal"))
-contrasts(M_Mass_c$activity_cycle) = contr.sum(3)
+M_Size <- left_join(M_Size,API) %>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
 
-M_Length$lifestyle <- as.factor(M_Length$lifestyle)
-contrasts(M_Length$lifestyle) = contr.sum(3)
-M_Length$hibernation_torpor <- as.factor(M_Length$hibernation_torpor)
-contrasts(M_Length$hibernation_torpor) = contr.sum(2)
-M_Length$activity_cycle <- as.factor(M_Length$activity_cycle)
-contrasts(M_Length$activity_cycle) = contr.sum(3)
-
-M_Length_c$lifestyle <- factor(as.character(M_Length_c$lifestyle), levels =c("Aerial","Ground", "Arboreal") )
-contrasts(M_Length_c$lifestyle) = contr.sum(3)
-M_Length_c$hibernation_torpor <- factor(as.character(M_Length_c$hibernation_torpor), levels =c("Yes", "No"))
-contrasts(M_Length_c$hibernation_torpor) = contr.sum(2)
-M_Length_c$activity_cycle <- factor(as.character(M_Length_c$activity_cycle), levels =c("All","Nocturnal", "Diurnal"))
-contrasts(M_Length_c$activity_cycle) = contr.sum(3)
-
-M_Size$lifestyle <- as.factor(M_Size$lifestyle)
-contrasts(M_Size$lifestyle) = contr.sum(3)
-M_Size$hibernation_torpor <- as.factor(M_Size$hibernation_torpor)
-contrasts(M_Size$hibernation_torpor) = contr.sum(2)
-M_Size$activity_cycle <- as.factor(M_Size$activity_cycle)
-contrasts(M_Size$activity_cycle) = contr.sum(3)
-
-M_Size_c$lifestyle <- factor(as.character(M_Size_c$lifestyle), levels =c("Aerial", "Ground", "Arboreal"))
-contrasts(M_Size_c$lifestyle) = contr.sum(3)
-M_Size_c$hibernation_torpor <- factor(as.character(M_Size_c$hibernation_torpor), levels =c("Yes", "No"))
-contrasts(M_Size_c$hibernation_torpor) = contr.sum(2)
-M_Size_c$activity_cycle <- factor(as.character(M_Size_c$activity_cycle), levels =c("All","Nocturnal", "Diurnal"))
-contrasts(M_Size_c$activity_cycle) = contr.sum(3)
-
-###check for influence of extreme AI values####
-#use to build model with winsorized extreme values
-#If model results differ use winsorized model
-nrow(M_Mass%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(M_Mass)
-nrow(M_Length%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(M_Length)
-nrow(M_Size%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(M_Size)
-
-M_Mass2 <- M_Mass %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
-M_Length2 <- M_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
-M_Size2 <- M_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.009,0.991)))
-####MASS ANALYSIS####
-
-#spatial variogram
 sp_mass_mod <- lme(LMass ~ 1,
                    random = ~1|Binomial, 
                    data= M_Mass)
 plot(Variogram(sp_mass_mod, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL MASS MODEL
-mass_model <- lmer(LMass ~ TPI_month_max + AI + HLU +
-                     lifestyle + activity_cycle + hibernation_torpor +
-                     TPI_month_max:AI + TPI_month_max:HLU +
-                     TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                     (1|Binomial),data=M_Mass,REML=F)
+final_mass_model <- lmer(LMass ~ TPI_month_max + API + HLU +
+                           TPI_month_max:API + TPI_month_max:HLU +
+                           (1|Binomial),data=M_Mass,REML=F)
 
-mass_model_winsor <- lmer(LMass ~ TPI_month_max + AI_win + HLU +
-                              lifestyle + activity_cycle + hibernation_torpor +
-                              TPI_month_max:AI_win + TPI_month_max:HLU +
-                              TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                              (1|Binomial),data=M_Mass2)
-tab_model(mass_model,mass_model_winsor)
-#no change to results significance - continue with mass_model
-mass_model_step <- step(mass_model,direction="backward")
+
+mass_model_step <- step(final_mass_model,direction="backward")
 
 mass_model_step_top <- get_model(mass_model_step)
 
-AIC(mass_model,mass_model_step_top)
+AIC(final_mass_model,mass_model_step_top)
 
-tab_model(mass_model,mass_model_step_top, digits=5)
+tab_model(final_mass_model,mass_model_step_top, digits=5)
 
-check_model(mass_model)
-#collect coef for figure generation
-coef_mass <- coef(summary(mass_model_step_top))
-write.csv(coef_mass, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Mam_Mass_API_coef.csv")
+check_model(final_mass_model)
 
 #after step wise removal based on AIC and BIC
 #FINAL MASS MODEL
 
-final_mass_model <- lmer(LMass ~ TPI_month_max + AI + HLU +
-                           lifestyle + activity_cycle + hibernation_torpor +
-                           TPI_month_max:AI + TPI_month_max:HLU +
-                           TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+final_mass_model <- lmer(LMass ~ TPI_month_max + API + HLU +
+                           TPI_month_max:API + TPI_month_max:HLU +
                            (1|Binomial),data=M_Mass)
+
 tab_model(final_mass_model, digits=5)
 
-#contrast coded complimentary model
-final_mass_model_c <- lmer(LMass ~ TPI_month_max + AI + HLU +
-                             lifestyle + activity_cycle + hibernation_torpor +
-                             TPI_month_max:AI + TPI_month_max:HLU +
-                             TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                             (1|Binomial),data=M_Mass_c)
-
-check_singularity(final_mass_model)
-check_outliers(final_mass_model)
-qqnorm(residuals(final_mass_model))
-
+plot(density(residuals(final_mass_model)))
 plot(final_mass_model)
+plot(check_outliers(final_mass_model))
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+library(corrplot)
+Mm <- M_Mass%>%filter(!is.na(API))
+m_d <- corrplot(cor(as.matrix(Mm[,c("Year_sc","TPI_month_max","API","HLU")])),
+                method="number",type="upper",col=col(200),
+                addCoef.col = "black", tl.col="black",tl.srt=45)  
 
-tab_model(final_mass_model,final_mass_model_c, digits=5, 
-          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_Mass_Results.html")
+tab_model(final_mass_model, digits=5, 
+          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_Mass_Results_api.html")
 
-sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_mass_LME.txt")
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_mass_LME_api.txt")
 "Mammal Mass Model LME"
 summary(final_mass_model)
 "R squared"
 print(MuMIn::r.squaredGLMM(final_mass_model))
-""
-""
-"Contrast"
-summary(final_mass_model_c)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_mass_model_c))
 sink()
 
-####LENGTH ANALYSIS####
 #spatial variogram
 sp_length_mod <- lme(LLength ~ 1,
                      random = ~1|Binomial, 
                      data= M_Length)
 plot(Variogram(sp_length_mod, form=~Lat+Lon|Binomial, maxDist = 5))
-mlm <- M_Length%>%filter(!is.na(API))
+
 #FULL LENGTH MODEL
-length_model <- lmer(LLength ~ TPI_month_max + AI + HLU +
-                       lifestyle + activity_cycle + hibernation_torpor +
-                       TPI_month_max:AI + TPI_month_max:HLU +
-                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+length_model <- lmer(LLength ~ TPI_month_max + API + HLU +
+                       TPI_month_max:API + TPI_month_max:HLU +
                        (1|Binomial),data=M_Length,REML = F,
                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-length_model_winsor<- lmer(LLength ~ TPI_month_max + AI_win + HLU +
-                              lifestyle + activity_cycle + hibernation_torpor +
-                              TPI_month_max:AI_win + TPI_month_max:HLU +
-                              TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                              (1|Binomial),data=M_Length2,REML = F,
-                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-tab_model(length_model,length_model_winsor)
-#no difference continue with length_model
 length_model_step <- step(length_model)
 
 length_model_step_top <- get_model(length_model_step)
@@ -196,50 +118,32 @@ length_model_step_top <- get_model(length_model_step)
 AIC(length_model,length_model_step_top)
 tab_model(length_model,length_model_step_top, digits=5)
 
-#collect coef for figure generation
-coef_length <- coef(summary(length_model_step_top))
-write.csv(coef_length, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Mam_Length_coef.csv")
-
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
-final_length_model <- lmer(LLength ~ TPI_month_max + AI + HLU +
-                             lifestyle + activity_cycle + hibernation_torpor +
-                             TPI_month_max:AI + TPI_month_max:HLU +
-                             TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
+final_length_model <- lmer(LLength ~ TPI_month_max + API + HLU +
+                             TPI_month_max:API + TPI_month_max:HLU +
                              (1|Binomial),data=M_Length,REML = T,
                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-#contrast coded complimentary model
-final_length_model_c <- lmer(LLength ~ TPI_month_max + AI + HLU +
-                               lifestyle + activity_cycle + hibernation_torpor +
-                               TPI_month_max:AI + TPI_month_max:HLU +
-                               TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                               (1|Binomial),data=M_Length_c,REML = T,
-                             control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-
-check_singularity(final_length_model)
-check_outliers(final_length_model)
-
-qqnorm(residuals(final_length_model))
+plot(density(residuals(final_length_model)))
 plot(final_length_model)
+plot(check_outliers(final_length_model))
+ll <- M_Length %>% filter(!is.na(API))
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+m_d <- corrplot(cor(as.matrix(ll[,c("Year_sc","TPI_month_max","API","HLU")])),
+                method="number",type="upper",col=col(200),
+                addCoef.col = "black", tl.col="black",tl.srt=45)
 
-check_model(final_length_model)
+tab_model(final_length_model, digits=5, 
+          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_Length_Results_api.html")
 
-tab_model(final_length_model,final_length_model_c, digits=5, 
-          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_Length_Results.html")
-
-sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_length_LME.txt")
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_length_LME_api.txt")
 "Mammal Length Model LME"
 summary(final_length_model)
 "R squared"
 print(MuMIn::r.squaredGLMM(final_length_model))
 ""
-""
-"Contrast"
-summary(final_length_model_c)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_length_model_c))
 sink()
 
 ####MASS:LENGTH ANALYSIS####
@@ -252,638 +156,662 @@ plot(Variogram(sp_size_mod, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL MASS:LENGTH MODEL
 
-size_model <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                        lifestyle + activity_cycle + hibernation_torpor +
-                        TPI_month_max:AI + TPI_month_max:HLU +
-                        TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                        (1|Binomial),data=M_Size, REML=F,
-                      control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+size_model <- lmer(LSize ~ TPI_month_max + API + HLU +
+                     TPI_month_max:API + TPI_month_max:HLU +
+                     (1|Binomial),data=M_Size, REML=F,
+                   control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-size_model_2 <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
-                            lifestyle + activity_cycle + hibernation_torpor +
-                            TPI_month_max:AI_win + TPI_month_max:HLU +
-                            TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                            (1|Binomial),data=M_Size2, REML=T,
-                          control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-tab_model(size_model,size_model_2)
-#no difference continue with size_model
-ml_step <- step(size_model_ml)
+
+ml_step <- step(size_model)
 
 ml_top <- get_model(ml_step)
 
-tab_model(size_model_ml,ml_top, digits = 5)
+tab_model(size_model,ml_top, digits = 5)
 
 AIC(ml_top)
 
 
-#collect coef for figure generation
-coef_size_size <- coef(summary(ml_top))
-
-write.csv(coef_size_size, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Mam_masslength_coef.csv")
-
-#after step wise removal based on AIC and BIC
-#FINAL MASS:LENGTH MODEL
-
 #contrast coded complimentary model
-final_size_mode <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                             lifestyle + activity_cycle + hibernation_torpor +
-                             TPI_month_max:AI + TPI_month_max:HLU +
-                             TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                             (1|Binomial),data=M_Size, REML=T,
-                           control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-final_size_mode_c <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                               lifestyle + activity_cycle + hibernation_torpor +
-                               TPI_month_max:AI + TPI_month_max:HLU +
-                               TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:hibernation_torpor +
-                               (1|Binomial),data=M_Size_c, REML=T,
-                             control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+final_size_mode <- lmer(LSize ~ TPI_month_max + API + HLU +
+                          TPI_month_max:API + TPI_month_max:HLU +
+                          (1|Binomial),data=M_Size, REML=T,
+                        control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
 
-check_singularity(final_size_mode)
-check_outliers(final_size_mode)
-
-qqnorm(residuals(final_size_mode))
+plot(density(residuals(final_size_mode)))
 plot(final_size_mode)
+plot(check_outliers(final_size_mode))
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+ms <- M_Size %>% filter(!is.na(API))
+m_d <- corrplot(cor(as.matrix(ms[,c("Year_sc","TPI_month_max","API","HLU")])),
+                method="number",type="upper",col=col(200),
+                addCoef.col = "black", tl.col="black",tl.srt=45)
 
-check_model(final_size_mode)
+tab_model(final_size_mode, digits=5, 
+          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_SMI_Results_api.html")
 
-tab_model(final_size_mode,final_size_mode_c, digits=5, 
-          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_SMI_Results.html")
-
-sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_size_LME.txt")
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Mammal_size_LME_api.txt")
 "Mammal SIZE Model LME"
-summary(final_size_modelml)
+summary(final_size_mode)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_size_modelml))
-""
-""
-"Contrast"
-summary(final_size_modelml_c)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_size_modelml_c))
+print(MuMIn::r.squaredGLMM(final_size_mode))
 sink()
-###############################BIRD ANALYSIS#############################################
-#change file path to location of datafiles
-B_Mass <- vroom("./Bird_Mass_Official.csv")%>%mutate(LMass = log10(Mass), AI = ifelse(Aridity>100,100,Aridity))
-B_Length <- vroom("./Bird_Length_Official.csv")%>%mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
-B_Size <- vroom("./Bird_Size_Official.csv")%>%mutate(LSize = (log10(Mass)/log10(Body_Length)), AI = ifelse(Aridity>100,100,Aridity))
+####AVES
+bird_m <- vroom("Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), 
+                                                  AI = ifelse(Aridity>100,100,Aridity))%>%
+  group_by(Binomial) %>% mutate(S_Mass = (LMass - mean(LMass))/sd(LMass))%>%
+  ungroup()
+bird_m <- bird_m %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
+
+bird_l <- vroom("Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), 
+                                                    AI = ifelse(Aridity>100,100,Aridity))%>%
+  group_by(Binomial) %>% mutate(S_Length = (LLength - mean(LLength))/sd(LLength))%>%
+  ungroup()
+bird_l <- bird_l %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
+
+bird_s <- vroom("Data_S3_Bird_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length), 
+                                                  AI = ifelse(Aridity>100,100,Aridity),
+                                                  LLength = log10(Body_Length),
+                                                  LMass = log10(Mass)) %>%
+  group_by(Binomial) %>% mutate(S_Length = (LLength - mean(LLength))/sd(LLength),
+                                S_Mass = (LMass - mean(LMass))/sd(LMass),
+                                S_Size = ((S_Mass/S_Length) - mean(S_Mass/S_Length)) / sd(S_Mass/S_Length))%>%
+  ungroup()
+bird_s <- bird_s %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))
 
 
-B_Mass_out$lifestyle <- as.factor(B_Mass_out$lifestyle)
-contrasts(B_Mass_out$lifestyle) = contr.sum(5)
-B_Mass_out$Migration <- as.factor(B_Mass_out$Migration)
-contrasts(B_Mass_out$Migration) = contr.sum(3)
-B_Mass_out$activity_cycle <- as.factor(B_Mass_out$activity_cycle)
-contrasts(B_Mass_out$activity_cycle) = contr.sum(2)
-B_Length_out$lifestyle <- as.factor(B_Length_out$lifestyle)
-contrasts(B_Length_out$lifestyle) = contr.sum(5)
-B_Length_out$Migration <- as.factor(B_Length_out$Migration)
-contrasts(B_Length_out$Migration) = contr.sum(3)
-B_Length_out$activity_cycle <- as.factor(B_Length_out$activity_cycle)
-contrasts(B_Length_out$activity_cycle) = contr.sum(2)
-B_Size_out$lifestyle <- as.factor(B_Size_out$lifestyle)
-contrasts(B_Size_out$lifestyle) = contr.sum(5)
-B_Size_out$Migration <- as.factor(B_Size_out$Migration)
-contrasts(B_Size_out$Migration) = contr.sum(3)
-B_Size_out$activity_cycle <- as.factor(B_Size_out$activity_cycle)
-contrasts(B_Size_out$activity_cycle) = contr.sum(2)
-###Factor coding###
-B_Mass$Season <- as.factor(B_Mass$Season)
-B_Size$Season <- as.factor(B_Size$Season)
+bird_m <- left_join(bird_m,API)%>%
+  mutate(API = (AI-AMin)/(AMax-AMin))
 
-B_Mass_c <- B_Mass
-B_Length_c <- B_Length
-B_Size_c <- B_Size
+bird_l <- left_join(bird_l,API)%>%
+  mutate(API = (AI_win-AMin)/(AMax-AMin))
 
-#contrast coding for analysis#
-B_Mass$lifestyle <- as.factor(B_Mass$lifestyle)
-contrasts(B_Mass$lifestyle) = contr.sum(5)
-B_Mass$Migration <- as.factor(B_Mass$Migration)
-contrasts(B_Mass$Migration) = contr.sum(3)
-B_Mass$activity_cycle <- as.factor(B_Mass$activity_cycle)
-contrasts(B_Mass$activity_cycle) = contr.sum(2)
-
-B_Mass_c$lifestyle <- factor(as.character(B_Mass_c$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist") )
-contrasts(B_Mass_c$lifestyle) = contr.sum(5)
-B_Mass_c$Migration <- factor(as.character(B_Mass_c$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
-contrasts(B_Mass_c$Migration) = contr.sum(3)
-B_Mass_c$activity_cycle <- factor(as.character(B_Mass_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
-contrasts(B_Mass_c$activity_cycle) = contr.sum(2)
-
-B_Length$lifestyle <- as.factor(B_Length$lifestyle)
-contrasts(B_Length$lifestyle) = contr.sum(5)
-B_Length$Migration <- as.factor(B_Length$Migration)
-contrasts(B_Length$Migration) = contr.sum(3)
-B_Length$activity_cycle <- as.factor(B_Length$activity_cycle)
-contrasts(B_Length$activity_cycle) = contr.sum(2)
-
-B_Length_c$lifestyle <- factor(as.character(B_Length_c$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist") )
-contrasts(B_Length_c$lifestyle) = contr.sum(5)
-B_Length_c$Migration <- factor(as.character(B_Length_c$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
-contrasts(B_Length_c$Migration) = contr.sum(3)
-B_Length_c$activity_cycle <- factor(as.character(B_Length_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
-contrasts(B_Length_c$activity_cycle) = contr.sum(2)
-
-B_Size$lifestyle <- as.factor(B_Size$lifestyle)
-contrasts(B_Size$lifestyle) = contr.sum(5)
-B_Size$Migration <- as.factor(B_Size$Migration)
-contrasts(B_Size$Migration) = contr.sum(3)
-B_Size$activity_cycle <- as.factor(B_Size$activity_cycle)
-contrasts(B_Size$activity_cycle) = contr.sum(2)
-
-B_Size_c$lifestyle <- factor(as.character(B_Size_c$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist"))
-contrasts(B_Size_c$lifestyle) = contr.sum(5)
-B_Size_c$Migration <- factor(as.character(B_Size_c$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
-contrasts(B_Size_c$Migration) = contr.sum(3)
-B_Size_c$activity_cycle <- factor(as.character(B_Size_c$activity_cycle), levels =c("Nocturnal", "Diurnal"))
-contrasts(B_Size_c$activity_cycle) = contr.sum(2)
-
-###check for influence of extreme AI values####
-#use to build model with winsorized extreme values
-#If model results differ use winsorized model
-nrow(B_Mass%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(B_Mass)
-nrow(B_Length%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(B_Length)
-nrow(B_Size%>%filter(AI > mean(AI)+(3*sd(AI))))/nrow(B_Size)
-
-B_Mass2 <- B_Mass %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
-B_Length2 <- B_Length %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
-B_Size2 <- B_Size %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.004,0.996)))
-####for models that are different 
-B_Length_c2 <- B_Length2
-B_Size_c2 <- B_Size2
-
-B_Length_c2$lifestyle <- factor(as.character(B_Length_c2$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist") )
-contrasts(B_Length_c2$lifestyle) = contr.sum(5)
-B_Length_c2$Migration <- factor(as.character(B_Length_c2$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
-contrasts(B_Length_c2$Migration) = contr.sum(3)
-B_Length_c2$activity_cycle <- factor(as.character(B_Length_c2$activity_cycle), levels =c("Nocturnal", "Diurnal"))
-contrasts(B_Length_c2$activity_cycle) = contr.sum(2)
-
-B_Size_c2$lifestyle <- factor(as.character(B_Size_c2$lifestyle), levels =c("Aerial", "Aquatic", "Arboreal", "Ground", "Generalist"))
-contrasts(B_Size_c2$lifestyle) = contr.sum(5)
-B_Size_c2$Migration <- factor(as.character(B_Size_c2$Migration), levels =c("Migratory", "Sedentary", "Partially Migratory"))
-contrasts(B_Size_c2$Migration) = contr.sum(3)
-B_Size_c2$activity_cycle <- factor(as.character(B_Size_c2$activity_cycle), levels =c("Nocturnal", "Diurnal"))
-contrasts(B_Size_c2$activity_cycle) = contr.sum(2)
-
-####MASS ANALYSIS####
-
-#spatial variogram
-sp_mass_mod_b <- lme(LMass ~ 1,
-                     random = ~1|Binomial, 
-                     data= B_Mass)
-plot(Variogram(sp_mass_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
+bird_s <- left_join(bird_s,API)%>%
+  mutate(API = (AI_win-AMin)/(AMax-AMin))
 
 #FULL MASS MODEL
-mass_model_b <- lmer(LMass ~ TPI_month_max + AI + HLU +
-                       lifestyle + activity_cycle + Migration +
-                       TPI_month_max:AI + TPI_month_max:HLU +
-                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                       (1|Binomial),data=B_Mass, REML=F,
-                     control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+#spatial variogram
+sp_size_mod2 <- lme(LSize ~ 1,
+                   random = ~1|Binomial, 
+                   data= bird_m)
+plot(Variogram(sp_size_mod2, form=~Lat+Lon|Binomial, maxDist = 5))
 
-mass_model_b_2 <- lmer(LMass ~ TPI_month_max + AI_win + HLU +
-                            lifestyle + activity_cycle + Migration +
-                            TPI_month_max:AI_win + TPI_month_max:HLU +
-                            TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                            (1|Binomial),data=B_Mass2, REML=F,
-                          control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-tab_model(mass_model_b,mass_model_b_2)
-#no difference continue with mass model
+final_mass_model2 <- lmer(LMass ~ TPI_month_max + API + HLU +
+                           TPI_month_max:API + TPI_month_max:HLU +
+                           (1|Binomial),data=bird_m,REML=F)
 
-mass_model_b_step <- step(mass_model_b)
-plot(mass_model_b_step)
-mass_model_b_step_top <- get_model(mass_model_b_step)
 
-AIC(mass_model_b,mass_model_b_step_top)
+mass_model_step2 <- step(final_mass_model,direction="backward")
 
-tab_model(mass_model_b,mass_model_b_step_top, digits=5)
+mass_model_step_top2 <- get_model(mass_model_step2)
 
-#collect coef for figure generation
-coef_mass <- coef(summary(mass_model_b_step_top))
-write.csv(coef_mass, "./Figure Generation/Bird_Mass_coef.csv")
+AIC(final_mass_model2,mass_model_step_top2)
+
+tab_model(final_mass_model2,mass_model_step_top2, digits=5)
+
+check_model(final_mass_model2)
 
 #after step wise removal based on AIC and BIC
 #FINAL MASS MODEL
 
-final_mass_model_b <- lmer(LMass ~ TPI_month_max + AI + HLU +
-                             lifestyle + activity_cycle + Migration +
-                             TPI_month_max:AI + TPI_month_max:HLU +
-                             TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                             (1|Binomial),data=B_Mass, REML=T,
-                           control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+final_mass_model2 <- lmer(LMass ~ TPI_month_max + API + HLU +
+                           TPI_month_max:API + TPI_month_max:HLU +
+                           (1|Binomial),data=bird_m)
 
+tab_model(final_mass_model2, digits=5)
 
-#contrast coded complimentary model
-final_mass_model_c_b <- lmer(LMass ~ TPI_month_max + AI + HLU +
-                               lifestyle + activity_cycle + Migration +
-                               TPI_month_max:AI + TPI_month_max:HLU +
-                               TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                               (1|Binomial),data=B_Mass_c, REML=T,
-                             control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+plot(density(residuals(final_mass_model2)))
+plot(final_mass_model2)
+plot(check_outliers(final_mass_model2))
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+m_d <- corrplot(cor(as.matrix(bird_m[,c("Year_sc","TPI_month_max","API","HLU")])),
+                method="number",type="upper",col=col(200),
+                addCoef.col = "black", tl.col="black",tl.srt=45)  
 
-performance::check_singularity(final_mass_model_b)
-performance::check_model(final_mass_model_b)
+tab_model(final_mass_model2, digits=5, 
+          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Aves_Mass_Results_api.html")
 
-tab_model(final_mass_model_b,final_mass_model_c_b, digits=5, file = "./Results/Bird_Mass_Results.html")
-
-sink("./Results/Bird_Mass_Results.txt")
-"Bird Mass Model LME"
-summary(final_mass_model_b)
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Aves_mass_LME_api.txt")
+"Mammal Mass Model LME"
+summary(final_mass_model2)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_mass_model_b))
-""
-""
-"Contrast"
-summary(final_mass_model_c_b)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_mass_model_c_b))
+print(MuMIn::r.squaredGLMM(final_mass_model2))
 sink()
 
-####LENGTH ANALYSIS####
 #spatial variogram
-sp_length_mod_b <- lme(LLength ~ 1,
-                       random = ~1|Binomial, 
-                       data= B_Length)
-plot(Variogram(sp_length_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
+sp_length_mod2 <- lme(LLength ~ 1,
+                     random = ~1|Binomial, 
+                     data= bird_l)
+plot(Variogram(sp_length_mod2, form=~Lat+Lon|Binomial, maxDist = 5))
 
 #FULL LENGTH MODEL
-length_model_b <- lmer(LLength ~ TPI_month_max + AI + HLU +
-                         lifestyle + activity_cycle + Migration +
-                         TPI_month_max:AI + TPI_month_max:HLU +
-                         TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                         (1|Binomial),data=B_Length,REML=F,
-                       control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-length_model_b_2 <- lmer(LLength ~ TPI_month_max + AI_win + HLU +
-                              lifestyle + activity_cycle + Migration +
-                              TPI_month_max:AI_win + TPI_month_max:HLU +
-                              TPI_month_max:lifestyle + TPI_month_max:Migration +
-                              (1|Binomial),data=B_Length2,REML=T,
-                            control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-tab_model(length_model_b, length_model_b_2)
-#DIFFERENCE - extreme AIs overly influence model, continue with length_model_b_2
+length_model2 <- lmer(LLength ~ TPI_month_max + API + HLU +
+                       TPI_month_max:API + TPI_month_max:HLU +
+                       (1|Binomial),data=bird_l,REML = F,
+                     control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-length_model_b_step <- step(length_model_b_2)
-plot(length_model_b_step)
-length_model_b_step_top <- get_model(length_model_b_step)
+length_model_step2 <- step(length_model2)
 
-AIC(length_model_b_2,length_model_b_step_top)
+length_model_step_top2 <- get_model(length_model_step2)
 
-tab_model(length_model_b_2,length_model_b_step_top, digits=5)
-
-#collect coef for figure generation
-coef_length <- coef(summary(length_model_b_step_top))
-write.csv(coef_length, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Bird_Length_coef.csv")
-
+AIC(length_model2,length_model_step_top2)
+tab_model(length_model2,length_model_step_top2, digits=5)
 
 #after step wise removal based on AIC and BIC
 #FINAL LENGTH MODEL
 
-final_length_model_b <- lmer(LLength ~ TPI_month_max + AI_win + HLU +
-                               lifestyle + activity_cycle + Migration +
-                               TPI_month_max:AI_win + TPI_month_max:HLU +
-                               TPI_month_max:lifestyle + TPI_month_max:Migration +
-                               (1|Binomial),data=B_Length2,REML=T,
-                             control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+final_length_model2 <- lmer(LLength ~ TPI_month_max + API + HLU +
+                             TPI_month_max:API + TPI_month_max:HLU +
+                             (1|Binomial),data=bird_l,REML = T,
+                           control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+summary(final_mass_model2)
+plot(density(residuals(final_length_model2)))
+plot(final_length_model2)
+plot(check_outliers(final_length_model2))
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+m_d <- corrplot(cor(as.matrix(bird_l[,c("Year_sc","TPI_month_max","API","HLU")])),
+                method="number",type="upper",col=col(200),
+                addCoef.col = "black", tl.col="black",tl.srt=45)
 
+tab_model(final_length_model2, digits=5, 
+          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Aves_Length_Results_api.html")
 
-#contrast coded complimentary model
-final_length_model_c_b <- lmer(LLength ~ TPI_month_max + AI_win + HLU +
-                                 lifestyle + activity_cycle + Migration +
-                                 TPI_month_max:AI_win + TPI_month_max:HLU +
-                                 TPI_month_max:lifestyle + TPI_month_max:Migration +
-                                 (1|Binomial),data=B_Length_c2,REML=T,
-                               control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-
-
-performance::check_singularity(final_length_model_b)
-performance::check_model(final_length_model_b)
-
-tab_model(final_length_model_b,final_length_model_c_b, digits=5, file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter//Results/Bird_Length_Results.html")
-
-sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter//Results/Bird_length_LME.txt")
-"Bird Length Model LME"
-summary(final_length_model_b)
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Aves_length_LME_api.txt")
+"Mammal Length Model LME"
+summary(final_length_model2)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_length_model_b))
+print(MuMIn::r.squaredGLMM(final_length_model2))
 ""
-""
-"Contrast"
-summary(final_length_model_c_b)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_length_model_c_b))
 sink()
 
 ####MASS:LENGTH ANALYSIS####
+
 #spatial variogram
-sp_size_mod_b <- lme(LSize ~ 1,
-                     random = ~1|Binomial, 
-                     data= B_Size)
-plot(Variogram(sp_size_mod_b, form=~Lat+Lon|Binomial, maxDist = 5))
+sp_size_mod2 <- lme(LSize ~ 1,
+                   random = ~1|Binomial, 
+                   data= bird_s)
+plot(Variogram(sp_size_mod2, form=~Lat+Lon|Binomial, maxDist = 5))
 
-#FULL LENGTH MODEL
-#AI < 75 set as filter to deal with outlier variable
-size_model_b <- lmer(LSize ~ TPI_month_max + AI + HLU +
-                       lifestyle + activity_cycle + Migration +
-                       TPI_month_max:AI + TPI_month_max:HLU +
-                       TPI_month_max:lifestyle + TPI_month_max:activity_cycle + TPI_month_max:Migration +
-                       (1|Binomial),data=B_Size,REML=F,
-                     control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-size_model_b_2 <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
-                            lifestyle + activity_cycle + Migration+
-                            TPI_month_max:AI_win + TPI_month_max:HLU+
-                            TPI_month_max:lifestyle+ TPI_month_max:Migration+ TPI_month_max:activity_cycle+
-                            (1|Binomial),data=B_Size2,REML = T,
-                          control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+#FULL MASS:LENGTH MODEL
 
-tab_model(size_model_b,size_model_b_2,digits=4)
-#DIFFERENCE - continue with size_model_b_2
+size_model2 <- lmer(LSize ~ TPI_month_max + API + HLU +
+                     TPI_month_max:API + TPI_month_max:HLU +
+                     (1|Binomial),data=bird_s, REML=F,
+                   control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
-size_model_b_step <- step(size_model_b_2)
-plot(size_model_b_step)
-size_model_b_step_top <- get_model(size_model_b_step)
-AIC(size_model_b_2,size_model_b_step_top)
-tab_model(size_model_b_2,size_model_b_step_top, digits=5)
 
-#collect coef for figure generation
-coef_size <- coef(summary(size_model_b_step_top))
-write.csv(coef_size, "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Figure Generation/Bird_Size_coef.csv")
-#after step wise removal based on AIC and BIC
-#FINAL LENGTH MODEL
+ml_step2 <- step(size_model2)
 
-final_size_model_b <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
-                             lifestyle + activity_cycle + Migration+
-                             TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
-                             TPI_month_max:Migration+
-                             (1|Binomial),data=B_Size2,REML = T,
-                           control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+ml_top2 <- get_model(ml_step2)
+
+tab_model(size_model2,ml_top2, digits = 5)
+
+AIC(ml_top2)
+
 
 #contrast coded complimentary model
-final_size_model_c_b <- lmer(LSize ~ TPI_month_max + AI_win + HLU +
-                               lifestyle + activity_cycle + Migration+
-                               TPI_month_max:activity_cycle + TPI_month_max:lifestyle+
-                               TPI_month_max:Migration+
-                               (1|Binomial),data=B_Size_c2,REML = T,
-                             control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+final_size_mode2 <- lmer(LSize ~ TPI_month_max + HLU +
+                          (1|Binomial),data=bird_s, REML=T,
+                        control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
 
+tab_model(final_size_mode2, digits = 5)
 
-check_singularity(final_size_model_b)
-check_model(final_size_model_b)
+plot(density(residuals(final_size_mode2)))
+plot(final_size_mode2)
+plot(check_outliers(final_size_mode2))
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+ss <- bird_s %>% filter(!is.na(API))
+m_d <- corrplot(cor(as.matrix(ss[,c("Year_sc","TPI_month_max","API","HLU")])),
+                method="number",type="upper",col=col(200),
+                addCoef.col = "black", tl.col="black",tl.srt=45)
 
-tab_model(final_size_model_b,final_size_model_c_b, digits=5, file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Bird_Size_Results.html")
+tab_model(final_size_mode2, digits=5, 
+          file = "C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Aves_SMI_Results_api.html")
 
-sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Bird_size_smi_LME.txt")
-"Bird Size Model LME"
-summary(final_size_model_b)
+sink("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Results/Aves_size_LME_api.txt")
+"Mammal SIZE Model LME"
+summary(final_size_mode2)
 "R squared"
-print(MuMIn::r.squaredGLMM(final_size_model_b))
-""
-""
-"Contrast"
-summary(final_size_model_c_b)
-"R squared"
-print(MuMIn::r.squaredGLMM(final_size_model_c_b))
+print(MuMIn::r.squaredGLMM(final_size_mode2))
 sink()
 
-#####FIGURE GENERATION######
-##Bird Response and Mammal Response to tpi by trait####
-#BIRD####
-#MASS
-tpi_bird_life <- ggpredict(final_mass_model_b, terms=c("TPI_month_max","lifestyle"))
-tpi1 <- plot(tpi_bird_life, colors=c("darkorange2","steelblue1", "forestgreen","maroon2", "saddlebrown"), line.size = 1.3)+
+
+###figures
+#birds mass
+tpi_m <- ggpredict(final_mass_model2, terms=c("TPI_month_max"))
+ai_m <- ggpredict(final_mass_model2, terms=c("API [0:1 by=0.1]"))
+hlu_m <- ggpredict(final_mass_model2, terms=c("HLU"))
+tpiai_m <- ggpredict(final_mass_model2, terms=c("TPI_month_max","API [0.25:0.75 by=0.25]"))
+tpihlu_m <- ggpredict(final_mass_model2, terms=c("TPI_month_max","HLU [0.25:0.75 by=0.25]"))
+
+#mammal mass
+tpi_mm <- ggpredict(final_mass_model, terms=c("TPI_month_max [0:1 by=0.1]"))
+ai_mm <- ggpredict(final_mass_model, terms=c("API [0:1 by=0.1]"))
+hlu_mm <- ggpredict(final_mass_model, terms=c("HLU [0:1 by=0.1]"))
+tpiai_mm <- ggpredict(final_mass_model, terms=c("TPI_month_max [0:1 by=0.1]","API [0.25:0.75 by=0.25]"))
+tpihlu_mm <- ggpredict(final_mass_model, terms=c("TPI_month_max [0:1 by=0.1]","HLU [0.25:0.75 by=0.25]"))
+
+#bird length
+tpi_l <- ggpredict(final_length_model2, terms=c("TPI_month_max [0:1 by=0.1]"))
+ai_l <- ggpredict(final_length_model2, terms=c("API [0:1 by=0.1]"))
+hlu_l <- ggpredict(final_length_model2, terms=c("HLU [0:1 by=0.1]"))
+tpiai_l <- ggpredict(final_length_model2, terms=c("TPI_month_max","API [0.25:0.75 by=0.25]"))
+tpihlu_l <- ggpredict(final_length_model2, terms=c("TPI_month_max","HLU [0.25:0.75 by=0.25]"))
+
+#mammal length
+tpi_lm <- ggpredict(final_length_model, terms=c("TPI_month_max [0:1 by=0.1]"))
+ai_lm <- ggpredict(final_length_model, terms=c("API [0:1 by=0.1]"))
+hlu_lm <- ggpredict(final_length_model, terms=c("HLU [0:1 by=0.1]"))
+tpiai_lm <- ggpredict(final_length_model, terms=c("TPI_month_max [0:1 by=0.1]","API [0.25:0.75 by=0.25]"))
+tpihlu_lm <- ggpredict(final_length_model, terms=c("TPI_month_max [0:1 by=0.1]","HLU [0.25:0.75 by=0.25]"))
+
+tpi_s <- ggpredict(final_size_mode2, terms=c("TPI_month_max [0:1 by=0.1]"))
+hlu_s <- ggpredict(final_size_mode2, terms=c("HLU [0:1 by=0.1]"))
+
+tpi_sm <- ggpredict(final_size_mode, terms=c("TPI_month_max [0:1 by=0.1]"))
+ai_sm <- ggpredict(final_size_mode, terms=c("API [0:1 by=0.1]"))
+hlu_sm <- ggpredict(final_size_mode, terms=c("HLU [0:1 by=0.1]"))
+tpiai_sm <- ggpredict(final_size_mode, terms=c("TPI_month_max [0:1 by=0.1]","API [0.25:0.75 by=0.25]"))
+tpihlu_sm <- ggpredict(final_size_mode, terms=c("TPI_month_max [0:1 by=0.1]","HLU [0.25:0.75 by=0.25]"))
+#mass plots
+b1 <- plot(tpi_m, colors=c("red3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Mass (g)",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+xlim(0,1)+
+       color="")+xlim(0,1)+ylim(1.35,1.65)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_bird_ac <- ggpredict(final_mass_model_b, terms=c("TPI_month_max","activity_cycle"))
-ac1<- plot(tpi_bird_ac, colors=c("goldenrod2", "black"), line.size = 1.3)+
-  labs(x = "Thermal Position Index",
-       y = "Log10 Body  Mass (g)",
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x = element_text(color="red3"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+b2 <- plot(ai_m, colors=c("steelblue2"), line.size = 1)+
+  labs(x = "Aridity Position Index",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+xlim(0,1)+
+       color="")+ylim(1.35,1.65)+xlim(0,1)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-ac1
-tpi_bird_ht <- ggpredict(final_mass_model_b, terms=c("TPI_month_max","Migration"))
-h1<- plot(tpi_bird_ht, colors=c("orangered3","royalblue3","grey30"), line.size = 1.3)+
-  labs(x = "Thermal Position Index",
-       y = "Log10 Body  Mass (g)",
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x = element_text(color="steelblue2"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+b3 <- plot(hlu_m, colors=c("forestgreen"), line.size = 1)+
+  labs(x = "Human Land Use Percent",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+xlim(0,1)+
+       color="")+xlim(0,1)+ylim(1.35,1.65)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x = element_text(color="forestgreen"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
 
-tpi_bird_life2 <- ggpredict(final_length_model_b, terms=c("TPI_month_max","lifestyle"))
-tpi2 <- plot(tpi_bird_life2, colors=c("darkorange2","steelblue1", "forestgreen","maroon2", "saddlebrown"), line.size = 1.3)+
+b4 <- plot(tpiai_m, ci=F,  colors=c("red3","gold3","steelblue3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Length (mm)",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+
+       color="API")+xlim(0,1)+ylim(1.46,1.56)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_bird_ac2 <- ggpredict(final_length_model_b, terms=c("TPI_month_max","activity_cycle"))
-ac2<- plot(tpi_bird_ac2, colors=c("goldenrod2", "black"), line.size = 1.3)+
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=16, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
+b5 <- plot(tpihlu_m, ci=F, colors=c("forestgreen","grey60","saddlebrown"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Length (mm)",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+
+       color="HLU %")+xlim(0,1)+ylim(1.46,1.56)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_bird_ht2 <- ggpredict(final_length_model_b, terms=c("TPI_month_max","Migration"))
-m2<- plot(tpi_bird_ht2, colors=c("orangered3","royalblue3","grey30"), line.size = 1.3)+
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=16, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
+b6 <- plot(tpi_l, colors=c("red3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Length (mm)",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+
+       color="")+ylim(2.05,2.26)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x = element_text(color="red3"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
 
-tpi_bird_life3 <- ggpredict(final_size_model_b, terms=c("TPI_month_max","lifestyle"))
-tpi3 <- plot(tpi_bird_life3, colors=c("darkorange2","steelblue1", "forestgreen","maroon2", "saddlebrown"), line.size = 1.3)+
-  labs(x = "Thermal Position Index",
-       y = "Mass:Length (g/mm)",
+b7 <- plot(ai_l, colors=c("steelblue2"), line.size = 1)+
+  labs(x = "Aridity Position Index",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+
+       color="")+ylim(2.05,2.26)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_bird_ac3 <- ggpredict(final_size_model_b, terms=c("TPI_month_max","activity_cycle"))
-ac3<- plot(tpi_bird_ac3, colors=c("goldenrod2", "black"), line.size = 1.3)+
-  labs(x = "Thermal Position Index",
-       y = "Mass:Length (g/mm)",
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x = element_text(color="steelblue2"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+b8 <- plot(hlu_l, colors=c("forestgreen"), line.size = 1)+
+  labs(x = "Human Land Use Percent",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+
+       color="")+ylim(2.05,2.26)+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_bird_ht3 <- ggpredict(final_size_model_b, terms=c("TPI_month_max","Migration"))
-m3<- plot(tpi_bird_ht3, colors=c("orangered3","royalblue3","grey30"), line.size = 1.3)+
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x = element_text(color="forestgreen"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+b9 <- plot(tpiai_l, ci=F,  colors=c("red3","gold3","steelblue3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Mass:Length (g/mm)",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+
+       color="API")+
   theme(axis.title = element_text(face="bold",size=14, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-life_bird <- ggpubr::ggarrange(tpi1, tpi2,tpi3,
-                  labels = c("A", "B", "C"),
-                  ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
-life_bird
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=16, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
 
-ac_bird <- ggpubr::ggarrange( ac1,ac3,
-                               labels = c("A","B"),
-                               ncol = 2, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
-
-ac_bird
-m_bird <- ggpubr::ggarrange(h1, m2,m3,
-                               labels = c("A", "B", "C"),
-                               ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
-
-m_bird
-##MAMMAL####
-#MASS
-
-tpi_mam_life <- ggpredict(final_mass_model, terms=c("TPI_month_max","lifestyle"))
-tpi4<-plot(tpi_mam_life, colors=c("darkorange2", "forestgreen", "saddlebrown"), line.size = 1.3)+
+b10 <- plot(tpihlu_l, ci=F, colors=c("forestgreen","grey60","saddlebrown"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Mass (g)",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_mam_ac <- ggpredict(final_mass_model, terms=c("TPI_month_max","activity_cycle"))
-ac4<-plot(tpi_mam_ac, colors=c("mediumpurple1","goldenrod2", "black"), line.size = 1.3)+
-  labs(x = "Thermal Position Index",
-       y = "Log10 Body Mass (g)",
-       title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_mam_ht <- ggpredict(final_mass_model, terms=c("TPI_month_max","hibernation_torpor"))
-h4<-plot(tpi_mam_ht, colors=c("turquoise3","tan"), line.size = 1.3)+
-  labs(x = "Thermal Position Index",
-       y = "Log10 Body Mass (g)",
-       title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
+       color="HLU %")+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=16, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
 
-tpi_mam_life <- ggpredict(final_length_model, terms=c("TPI_month_max","lifestyle"))
-tpi5<-plot(tpi_mam_life, colors=c("darkorange2", "forestgreen", "saddlebrown"), line.size = 1.3)+
+b11 <- plot(tpi_s, colors=c("red3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Length (mm)",
+       y = "Log Mass:Length (g/mm)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_mam_ac <- ggpredict(final_length_model, terms=c("TPI_month_max","activity_cycle"))
-ac5<-plot(tpi_mam_ac, colors=c("mediumpurple1","goldenrod2", "black"), line.size = 1.3)+
+       color="")+ylim(0.55,0.8)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x = element_text(color="red3"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+b12 <- plot(hlu_s, colors=c("forestgreen"), line.size = 1)+
+  labs(x = "Human Land Use Percent",
+       y = "Log Mass:Length (g/mm)",
+       title = "",
+       color="")+ylim(0.55,0.8)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x = element_text(color="forestgreen"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+plot(b12)
+#mammals
+m1 <- plot(tpi_mm, colors=c("red3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Length (mm)",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
+       color="")+ylim(1.45,1.75)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="red3"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m2 <- plot(ai_mm, colors=c("steelblue2"), line.size = 1)+
+  labs(x = "Ariditry Position Index",
+       y = "Log Body Mass (g)",
+       title = "",
+       color="")+ylim(1.45,1.75)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="steelblue2"),
         legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_mam_ht <- ggpredict(final_length_model, terms=c("TPI_month_max","hibernation_torpor"))
-h5<-plot(tpi_mam_ht, colors=c("turquoise3","tan"), line.size = 1.3)+
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m3 <- plot(hlu_mm, colors=c("forestgreen"), line.size = 1)+
+  labs(x = "Human Land Use Percent",
+       y = "Log Body Mass (g)",
+       title = "",
+       color="")+ylim(1.45,1.75)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="forestgreen"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m4 <- plot(tpiai_mm, ci=F,  colors=c("red3","gold3","steelblue3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Log10 Body Length (mm)",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
+       color="API")+xlim(0,1)+ylim(1.59,1.64)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
 
-tpi_mam_life <- ggpredict(final_size_mode, terms=c("TPI_month_max","lifestyle"))
-tpi6<-plot(tpi_mam_life, colors=c("darkorange2", "forestgreen", "saddlebrown"), line.size = 1.3)+
+m5 <- plot(tpihlu_mm, ci=F, colors=c("forestgreen","grey60","saddlebrown"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Mass:Length (g/mm)",
+       y = "Log Body Mass (g)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_mam_ac <- ggpredict(final_size_mode, terms=c("TPI_month_max","activity_cycle"))
-ac6<-plot(tpi_mam_ac, colors=c("mediumpurple1","goldenrod2", "black"), line.size = 1.3)+
+       color="HLU %")+xlim(0,1)+ylim(1.59,1.64)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
+
+m6 <- plot(tpi_lm, colors=c("red3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Mass:Length (g/mm)",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
-        legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
-tpi_mam_ht <- ggpredict(final_size_mode, terms=c("TPI_month_max","hibernation_torpor"))
-h6<- plot(tpi_mam_ht, colors=c("turquoise3","tan"), line.size = 1.3)+
+       color="")+xlim(0,1)+ylim(2.17,2.3)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x=element_text(color="red3"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m7 <- plot(ai_lm, colors=c("steelblue2"), line.size = 1)+
+  labs(x = "Ariditry Position Index",
+       y = "Log Body Length (mm)",
+       title = "",
+       color="")+ylim(2.17,2.3)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        axis.title.x=element_text(color="steelblue2"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m8 <- plot(hlu_lm, colors=c("forestgreen"), line.size = 1)+
+  labs(x = "Human Land Use Percent",
+       y = "Log Body Length (mm)",
+       title = "",
+       color="")+ylim(2.17,2.3)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="forestgreen"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m9 <- plot(tpiai_lm, ci=F,  colors=c("red3","gold3","steelblue3"), line.size = 1)+
   labs(x = "Thermal Position Index",
-       y = "Mass:Length (g/mm)",
+       y = "Log Body Length (mm)",
        title = "",
-       color="")+xlim(0,1)+
-  theme(axis.title = element_text(face="bold",size=16, color="black"),
-        axis.text = element_text(size=14, color="black"),
+       color="API")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
+
+m10 <- plot(tpihlu_lm, ci=F, colors=c("forestgreen","grey60","saddlebrown"), line.size = 1)+
+  labs(x = "Thermal Position Index",
+       y = "Log Body Length (mm)",
+       title = "",
+       color="HLU %")+xlim(0,1)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"))
+
+m11 <- plot(tpi_sm, colors=c("red3"), line.size = 1)+
+  labs(x = "Thermal Position Index",
+       y = "Log Mass:Length (g/mm)",
+       title = "",
+       color="")+ylim(0.65,0.76)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="red3"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
+
+m12 <- plot(ai_sm, colors=c("steelblue2"), line.size = 1)+
+  labs(x = "Ariditry Position Index",
+       y = "Log Mass:Length (g/mm)",
+       title = "",
+       color="")+ylim(0.65,0.76)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="steelblue2"),
         legend.text = element_text(color="black",size=12, face="bold"),
-        legend.position = "bottom",
-  )
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
 
-life_mam <- ggpubr::ggarrange(tpi4, tpi5,tpi6,
-                               labels = c("A", "B", "C"),
-                               ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
-life_mam
+m13 <- plot(hlu_sm, colors=c("forestgreen"), line.size = 1)+
+  labs(x = "Human Land Use Percent",
+       y = "Log Mass:Length (g/mm)",
+       title = "",
+       color="")+ylim(0.65,0.76)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        axis.title.x=element_text(color="forestgreen"),
+        legend.text = element_text(color="black",size=10, face="bold"),
+        legend.position = "none",
+        plot.margin = margin(0,1,0.2,0, "cm"),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5))
 
-ac_mam <- ggpubr::ggarrange( ac4, ac5, ac6,
-                              labels = c("A", "B", "C"),
-                              ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+m14 <- plot(tpiai_sm, ci=F,  colors=c("red3","gold3","steelblue3"), line.size = 1)+
+  labs(x = "Thermal Position Index",
+       y = "Log Mass:Length (g/mm)",
+       title = "",
+       color="API")+xlim(0,1)+ylim(0.69,0.71)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"),
+        legend.position = "top")
 
-ac_mam
+m15 <- plot(tpihlu_sm, ci=F, colors=c("forestgreen","grey60","saddlebrown"), line.size = 1)+
+  labs(x = "Thermal Position Index",
+       y = "Log Mass:Length (g/mm)",
+       title = "",
+       color="HLU %")+xlim(0,1)+ylim(0.69,0.71)+
+  theme(axis.title = element_text(face="bold",size=14, color="black"),
+        axis.text = element_text(size=12, color="black"),
+        legend.text = element_text(color="black",size=12),
+        plot.title = element_text(face = "bold", size=12, color = "black",hjust = 0.5),
+        legend.title = element_text(face="bold"),
+        legend.position = "top")
 
-h_mam <- ggpubr::ggarrange(h4, h5,h6,
-                            labels = c("A", "B", "C"),
-                            ncol = 3, nrow = 1,common.legend = TRUE,legend="bottom",label.x = 0.1)
+####
+library(ggpubr)
+#REMEMBER REOMVE X AXIS LABELS WHEN ALL COMBINED
+b_mass <- ggarrange(b1,m1,b2,m2,b3,m3,
+                    ncol = 2,
+                    nrow = 3,
+                    labels = "AUTO",vjust = 1.3,hjust=-2)
+plot(b_mass)
+ggsave("mass_plot.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
 
-h_mam
+b_lenght <- ggarrange(b6,m6,b7,m7,b8,m8,
+                    ncol = 2,
+                    nrow = 3,
+                    labels = "AUTO",vjust = 1.3,hjust=-2)
+plot(b_lenght)
+ggsave("length_plot.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
+
+p1 <- ggplot() + theme_void()
+b_size <- ggarrange(b11,m11,p1,m12,b12,m13,
+                      ncol = 2,
+                      nrow = 3,
+                      labels = "AUTO",vjust = 1.3,hjust=-2)
+plot(b_size)
+ggsave("size_plot.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
+
+
+
+b_inter_m <- ggarrange(b4,m4,
+                     ncol = 2,
+                     labels = "AUTO",
+                     common.legend = T,legend="top")
+b_inter_m2 <- ggarrange(b5,m5,
+                       ncol = 2,
+                       labels = c("C","D"),
+                       common.legend = T,legend="top")
+
+plot(b_inter_m)
+ggsave("mass_api_inter.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
+plot(b_inter_m2)
+ggsave("mass_hlu_inter.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
+
+b_inter_l <- ggarrange(b9,m9,
+                       ncol = 2,
+                       labels = "AUTO",
+                       common.legend = T,legend="top")
+b_inter_l2 <- ggarrange(b10,m10,
+                        ncol = 2,
+                        labels = c("C","D"),
+                        common.legend = T,legend="top")
+
+plot(b_inter_l)
+ggsave("length_api_inter.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
+plot(b_inter_l2)
+ggsave("length_hlu_inter.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
+
+
+b_inter_s <- ggarrange(m14,m15,
+                       ncol = 2,
+                       labels = "AUTO")
+plot(b_inter_s)
+ggsave("size_api_inter.jpg",
+       path="C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/Data for map of trends/plots")
