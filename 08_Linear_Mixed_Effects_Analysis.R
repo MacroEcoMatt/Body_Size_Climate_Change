@@ -34,7 +34,7 @@ M_Size <- vroom("Data_S6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Bo
   group_by(Binomial) %>% mutate(S_Size = (LSize - mean(LSize)) / sd(LSize))%>%
   ungroup()
 
-API <- vroom("C:/Users/matth/OneDrive/Documents/PhD/Thesis/TPI and API/Month_Limits.csv")%>%
+API <- vroom("Data_S8_TPI_Limits.csv")%>%
   dplyr::select(Binomial, AMin, AMax, MonthName)%>%
   rename(Mnth = MonthName)%>%
   mutate(Mnth = ifelse(Mnth=="Jun", "June",
@@ -350,7 +350,6 @@ tab_model(size_model2,ml_top2, digits = 5)
 AIC(ml_top2)
 
 
-#contrast coded complimentary model
 final_size_mode2 <- lmer(LSize ~ TPI_month_max + HLU +
                           (1|Binomial),data=bird_s, REML=T,
                         control = lmerControl(optimizer = "optimx", calc.derivs = FALSE, optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
