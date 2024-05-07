@@ -11,7 +11,7 @@ library(phyr)
 
 setwd("") #set to where model output files will be stored
 ###############################MAMMAL ANALYSIS#############################################
-API <- vroom("C:/Users/matth/OneDrive/Documents/PhD/Thesis/TPI and API/Month_Limits.csv")%>%
+API <- vroom("Data_S8_TPI_Limits.csv")%>%
   dplyr::select(Binomial, AMin, AMax, MonthName)%>%
   rename(Mnth = MonthName)%>%
   mutate(Mnth = ifelse(Mnth=="Jun", "June",
