@@ -14,27 +14,29 @@ library(lmerTest)
 library(ggplot2)
 library(ggthemes)
 library(performance)
-setwd("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/For Submisstion/Supplmentary Datafiles for Publication")
+
+#update to file location
+setwd("")
 ###############################MAMMAL ANALYSIS#############################################
 #change file path to location of datafiles
-M_Mass <- vroom("Data_S4_Mammal_Mass.csv")%>%mutate(LMass = log10(Mass), 
+M_Mass <- vroom("Data_4_Mammal_Mass.csv")%>%mutate(LMass = log10(Mass), 
                                                       AI = ifelse(Aridity>100,100,Aridity))%>%
   group_by(Binomial) %>% mutate(S_Mass = (LMass - mean(LMass))/sd(LMass))%>%
   ungroup()
 
-M_Length <- vroom("Data_S5_Mammal_Length.csv")%>%mutate(LLength = log10(Body_Length), 
+M_Length <- vroom("Data_5_Mammal_Length.csv")%>%mutate(LLength = log10(Body_Length), 
                                                         AI = ifelse(Aridity>100,100,Aridity))%>%
   group_by(Binomial) %>% mutate(S_Length = (LLength - mean(LLength))/sd(LLength))%>%
   ungroup()
 
-M_Size <- vroom("Data_S6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length), 
+M_Size <- vroom("Data_6_Mammal_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length), 
                                                       AI = ifelse(Aridity>100,100,Aridity),
                                                       LLength = log10(Body_Length),
                                                       LMass = log10(Mass)) %>%
   group_by(Binomial) %>% mutate(S_Size = (LSize - mean(LSize)) / sd(LSize))%>%
   ungroup()
 
-API <- vroom("Data_S8_TPI_Limits.csv")%>%
+API <- vroom("Data_7_TPI_Limits.csv")%>%
   dplyr::select(Binomial, AMin, AMax, MonthName)%>%
   rename(Mnth = MonthName)%>%
   mutate(Mnth = ifelse(Mnth=="Jun", "June",
@@ -198,19 +200,19 @@ summary(final_size_mode)
 print(MuMIn::r.squaredGLMM(final_size_mode))
 sink()
 ####AVES
-bird_m <- vroom("Data_S1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), 
+bird_m <- vroom("Data_1_Bird_Mass.csv")%>%mutate(LMass = log10(Mass), 
                                                   AI = ifelse(Aridity>100,100,Aridity))%>%
   group_by(Binomial) %>% mutate(S_Mass = (LMass - mean(LMass))/sd(LMass))%>%
   ungroup()
 bird_m <- bird_m %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.008,0.992)))
 
-bird_l <- vroom("Data_S2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), 
+bird_l <- vroom("Data_2_Bird_Length.csv")%>%mutate(LLength = log10(Body_Length), 
                                                     AI = ifelse(Aridity>100,100,Aridity))%>%
   group_by(Binomial) %>% mutate(S_Length = (LLength - mean(LLength))/sd(LLength))%>%
   ungroup()
 bird_l <- bird_l %>% mutate(AI_win = DescTools::Winsorize(AI, probs = c(0.014,0.986)))
 
-bird_s <- vroom("Data_S3_Bird_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length), 
+bird_s <- vroom("Data_3_Bird_Size.csv")%>%mutate(LSize = log10(Mass)/log10(Body_Length), 
                                                   AI = ifelse(Aridity>100,100,Aridity),
                                                   LLength = log10(Body_Length),
                                                   LMass = log10(Mass)) %>%
@@ -386,7 +388,8 @@ library(ggeffects)
 library(dplyr)
 library(vroom)
 
-da <- vroom("C:/Users/matth/OneDrive/Documents/PhD/Thesis/Body Size Chapter/A_SUBMISSION_UPDATED/figure data.csv")
+#update to file location
+da <- vroom("/Data_9_figure_data.csv")
 
 ###Generate base plots####
 ###MASS
