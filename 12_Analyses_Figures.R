@@ -14,119 +14,11 @@ library(stringr)
 library(ape)
 library(phyr)
 
-##
+M_Mass <- vroom("D:/Thesis Projects/GCB Revised Manuscript/Datasets/Data_4_Mammal_Mass.csv",delim=",")
+M_Length <- vroom("D:/Thesis Projects/GCB Revised Manuscript/Datasets/Data_5_Mammal_Length.csv",delim=",")
+B_Mass <- vroom("D:/Thesis Projects/GCB Revised Manuscript/Datasets/Data_1_Bird_Mass.csv",delim=",")
+B_Length <- vroom("D:/Thesis Projects/GCB Revised Manuscript/Datasets/Data_2_Bird_Length",delim=",")
 
-#DATA####
-setwd("D:/Thesis Projects/Body Size Reviewer Analyses and data")
-tpi <- vroom("D:/Thesis Projects/Climate Change Indicators/Niche Limits/TPI_API_Original/Month_Limits_Baseline_Final.csv")[,c(6:12)]%>%
-  rename(TMax_lim = TMax, AMax_lim =AMax, TMin_lim = TMin, AMin_lim =AMin,Month=MonthNumber)
-syns <- vroom("D:/PhD/Thesis/TPI and API/Master_Synonym_List_All.csv")%>%distinct(IUCN_Binomial,.keep_all = T)
-##
-
-M_Mass <- vroom("D:/Thesis Projects/Body Size Reviewer Analyses and data/ALL_DATA_CLIMATE.csv")%>%
-  filter(Class=="Mammalia")%>%filter(!is.na(Mass))%>% filter(!Age=="Juv")%>%
-  group_by(Binomial)%>%filter(n()>99)%>%ungroup()%>%
-  mutate(LMass = log10(Mass),AI = ifelse(Aridity>100,100,Aridity))
-
-M_Mass$Binomial <- str_squish(M_Mass$Binomial)  
-
-M_Mass<-M_Mass %>%left_join(tpi)%>%
-  mutate(TPI_Max = (Tx_max - TMin_lim)/(TMax_lim-TMin_lim),
-         API = (AI - AMin_lim)/(AMax_lim-AMin_lim),
-         Year_Fact = as.character(Year),
-         Lat2 = Lat^2,
-         HLU_Class = ifelse(HLU_Class==11,"Urban",
-                            ifelse(HLU_Class==22,"Cropland",
-                                   ifelse(HLU_Class==33,"Pasture",
-                                          ifelse(HLU_Class==55,"Grassland",
-                                                 ifelse(HLU_Class==66,"Other",
-                                                        ifelse(HLU_Class==77,"Water",
-                                                               ifelse(is.na(HLU_Class),NA,
-                                                                      ifelse(HLU_Class==0,"Other","Forest")))))))))
-msite <- M_Mass %>% group_by(Lat,Lon)%>%summarise(N_per_site=n())%>%ungroup()%>%mutate(Site = as.character(row_number()))
-M_Mass <- left_join(M_Mass,msite)%>%filter(!is.na(TPI_Max))%>%filter(n()>99)%>%ungroup()
-
-B_Mass <- vroom("D:/Thesis Projects/Body Size Reviewer Analyses and data/ALL_DATA_CLIMATE.csv")%>%
-  filter(Class=="Aves")%>%filter(!is.na(Mass))%>%filter(!Age=="Juv")
-
-B_Mass$Binomial <- str_squish(B_Mass$Binomial)  
-
-syns_bmass <- syns %>% filter(Synonym %in% B_Mass$Binomial)%>%rename(Binomial = Synonym)
-
-B_Mass <- B_Mass %>% group_by(Binomial)%>%filter(n()>99)%>%ungroup()%>%
-  mutate(LMass = log10(Mass),AI = ifelse(Aridity>100,100,Aridity))%>%
-  left_join(syns_bmass)%>%
-  mutate(Binomial = ifelse(is.na(IUCN_Binomial),Binomial,IUCN_Binomial))%>%
-  dplyr::select(-IUCN_Binomial)%>%
-  left_join(tpi)%>%
-  mutate(TPI_Max = (Tx_max - TMin_lim)/(TMax_lim-TMin_lim),
-         API = (AI - AMin_lim)/(AMax_lim-AMin_lim),
-         HLU_Class = ifelse(HLU_Class==11,"Urban",
-                            ifelse(HLU_Class==22,"Cropland",
-                                   ifelse(HLU_Class==33,"Pasture",
-                                          ifelse(HLU_Class==55,"Grassland",
-                                                 ifelse(HLU_Class==66,"Other",
-                                                        ifelse(HLU_Class==77,"Water",
-                                                               ifelse(is.na(HLU_Class),NA,
-                                                                      ifelse(HLU_Class==0,"Other","Forest")))))))))
-bsite <- B_Mass %>% group_by(Lat,Lon)%>%summarise(N_per_site=n())%>%ungroup()%>%mutate(Site = as.character(row_number()))
-B_Mass <- left_join(B_Mass,bsite)%>%filter(!is.na(TPI_Max))%>%group_by(Binomial)%>%filter(n()>99)%>%ungroup()
-
-M_Length <- vroom("D:/Thesis Projects/Body Size Reviewer Analyses and data/ALL_DATA_CLIMATE.csv")%>%
-  filter(Class=="Mammalia")%>%filter(!is.na(Body_Length))%>%filter(!Age=="Juv")%>%
-  group_by(Binomial)%>%filter(n()>99)%>%ungroup()%>%
-  mutate(LLength = log10(Body_Length),AI = ifelse(Aridity>100,100,Aridity))
-M_Length$Binomial <- str_squish(M_Length$Binomial)  
-
-syns_mlength <- syns %>% filter(Synonym %in% M_Length$Binomial)%>%rename(Binomial = Synonym)
-
-M_Length <- M_Length %>% left_join(syns_mlength)%>%
-  mutate(Binomial = ifelse(is.na(IUCN_Binomial),Binomial,IUCN_Binomial))%>%
-  dplyr::select(-IUCN_Binomial)%>%
-  left_join(tpi)%>%
-  mutate(TPI_Max = (Tx_max - TMin_lim)/(TMax_lim-TMin_lim),
-         API = (AI - AMin_lim)/(AMax_lim-AMin_lim),
-         Year_Fact = as.character(Year),
-         HLU_Class = ifelse(HLU_Class==11,"Urban",
-                            ifelse(HLU_Class==22,"Cropland",
-                                   ifelse(HLU_Class==33,"Pasture",
-                                          ifelse(HLU_Class==55,"Grassland",
-                                                 ifelse(HLU_Class==66,"Other",
-                                                        ifelse(HLU_Class==77,"Water",
-                                                               ifelse(is.na(HLU_Class),NA,
-                                                                      ifelse(HLU_Class==0,"Other","Forest")))))))))
-
-msite2 <- M_Length %>% group_by(Lat,Lon)%>%summarise(N_per_site=n())%>%ungroup()%>%mutate(Site = as.character(row_number()))
-M_Length <- left_join(M_Length,msite2)%>%filter(!is.na(TPI_Max))%>%group_by(Binomial)%>%filter(n()>99)%>%ungroup()                   
-
-#
-B_Length <- vroom("D:/Thesis Projects/Body Size Reviewer Analyses and data/ALL_DATA_CLIMATE.csv")%>%
-  filter(Class=="Aves")%>%filter(!is.na(Body_Length))%>%filter(!Age=="Juv")%>%
-  group_by(Binomial)%>%filter(n()>99)%>%ungroup()%>%
-  mutate(LLength = log10(Body_Length), AI = ifelse(Aridity>100,100,Aridity))
-B_Length$Binomial <- str_squish(B_Length$Binomial)  
-
-syns_blength <- syns %>% filter(Synonym %in% B_Length$Binomial)%>%rename(Binomial = Synonym)
-
-B_Length <- B_Length %>% left_join(syns_blength)%>%
-  mutate(Binomial = ifelse(is.na(IUCN_Binomial),Binomial,IUCN_Binomial))%>%
-  dplyr::select(-IUCN_Binomial)%>%
-  left_join(tpi)%>%
-  mutate(TPI_Max = (Tx_max - TMin_lim)/(TMax_lim-TMin_lim),
-         API = (AI - AMin_lim)/(AMax_lim-AMin_lim),
-         Year_Fact = as.character(Year),
-         HLU_Class = ifelse(HLU_Class==11,"Urban",
-                            ifelse(HLU_Class==22,"Cropland",
-                                   ifelse(HLU_Class==33,"Pasture",
-                                          ifelse(HLU_Class==55,"Grassland",
-                                                 ifelse(HLU_Class==66,"Other",
-                                                        ifelse(HLU_Class==77,"Water",
-                                                               ifelse(is.na(HLU_Class),NA,
-                                                                      ifelse(HLU_Class==0,"Other","Forest")))))))))
-
-bsite2 <- B_Length %>% group_by(Lat,Lon)%>%summarise(N_per_site=n())%>%ungroup()%>%mutate(Site = as.character(row_number()))
-B_Length <- left_join(B_Length,bsite2)%>%filter(!is.na(TPI_Max))%>%group_by(Binomial)%>%filter(n()>99)%>%ungroup()
-#Phylogeny####
 mammaltree <- read.tree("F:/Phylogenetic Trees/mammalTree.newick")
 
 oldname_m <- mammaltree$tip.label
@@ -192,536 +84,327 @@ B_Length_tree <- B_Length %>% filter(Binomial %in% treel)
 
 M_Mass_tree2 <- M_Mass_tree%>%filter(is.finite(LMass))%>%
   mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
-                                     API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
-                                     HLU= ((HLU - mean(HLU,na.rm=T))/sd(HLU, na.rm=T)),
-                                     Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
-                                     LMass = ((LMass - mean(LMass,na.rm=T))/sd(LMass, na.rm=T)))
+         API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
+         ULU= ((ULU - mean(ULU,na.rm=T))/sd(ULU, na.rm=T)),
+         ALU= ((ALU - mean(ALU,na.rm=T))/sd(ALU, na.rm=T)),
+         Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
+         LMass = ((LMass - mean(LMass,na.rm=T))/sd(LMass, na.rm=T)))
 
-phylo_m <- pglmm(LMass ~ TPI_Max + API + HLU
-                 + TPI_Max:API + TPI_Max:HLU+ Year
-                 + (TPI_Max|Binomial__)
-                 + (API|Binomial__)
-                 + (HLU|Binomial__)
-                 + (Year|Binomial__)
-                 + (1|Binomial__)
-                 +  (1|Realm) + (1|Site), 
-                 data=M_Mass_tree2, cov_ranef = list(Binomial = mam_tree_mass), 
-                 bayes = TRUE)
 
+phylo_m_a <- pglmm(LMass ~ TPI_Max + API + ALU
+                   + TPI_Max:API + TPI_Max:ALU+ Year
+                   + (TPI_Max|Binomial__)
+                   + (API|Binomial__)
+                   + (ALU|Binomial__)
+                   + (Year|Binomial__)
+                   + (1|Binomial__)
+                   +  (1|Realm) + (1|Site), 
+                   data=M_Mass_tree2, cov_ranef = list(Binomial = mam_tree_mass), 
+                   bayes = TRUE)
+
+summary(phylo_m_a)
+
+samples4 <- inla.posterior.sample(n = 1000, result = phylo_m_a$inla.model)
+
+inter4 <- unlist(lapply(samples4, function(s) s$latent["(Intercept):1", 1]))
+TPI4 <- unlist(lapply(samples4, function(s) s$latent["TPI_Max:1", 1]))
+API4 <- unlist(lapply(samples4, function(s) s$latent["API:1", 1]))
+ALU4 <- unlist(lapply(samples4, function(s) s$latent["ALU:1", 1]))
+ULU4 <- unlist(lapply(samples4, function(s) s$latent["ULU:1", 1]))
+ta4 <- unlist(lapply(samples4, function(s) s$latent["TPI_Max:API:1", 1]))
+talu4 <- unlist(lapply(samples4, function(s) s$latent["TPI_Max:ALU:1", 1]))
+tulu4 <- unlist(lapply(samples4, function(s) s$latent["TPI_Max:ULU:1", 1]))
+ye4 <- unlist(lapply(samples4, function(s) s$latent["Year:1", 1]))
+
+sigma4 <- unlist(lapply(samples4,
+                        function(s) 1/sqrt(s$hyperpar["Precision for the Gaussian observations"])))
+
+y.sim4 <- inter4 + TPI4 + API4 + ALU4 + ULU4 + ta4 + talu4 + tulu4 + ye4 + rnorm(1000, sd=sigma4)
+y4 <- sample(M_Mass_tree2$LMass, 1000, replace=F)
+
+d4 <- bind_rows(list(y=data.frame(y=y4), 
+                     y_sim=data.frame(y=y.sim4)),
+                .id="data.type")
+
+ggplot(d4, aes(y, color=data.type,fill=data.type)) + geom_histogram(linewidth=1)+
+  theme_minimal()+
+  scale_fill_manual(values=c("black","firebrick"))+
+  scale_colour_manual(values=c("black","firebrick"))+xlim(-3,3)+
+  labs(y="Density", x="Log10 Body Mass (z-score)",color="",fill="")+
+  theme(axis.title = element_text(color="black",size=12, face="bold"),
+        axis.text = element_text(color="black",size=12))
+
+ggsave("D:/Thesis Projects/GCB Revised Manuscript/figures/Mammal Mass/Mammal_Mass_PP_LandUseUpdate.jpg")
+#p_direction
+library(bayestestR)
+p_direction_mammal_mass <- data.frame(intercept = p_direction(inter4)[1,2],
+                                      TPI = p_direction(TPI4)[1,2],
+                                      API = p_direction(API4)[1,2],
+                                      ALU = p_direction(ALU4)[1,2],
+                                      ULU = p_direction(ULU4)[1,2],
+                                      TPI_API = p_direction(ta4)[1,2],
+                                      TPI_ALU = p_direction(talu4)[1,2],
+                                      TPI_ULU = p_direction(talu4)[1,2],
+                                      Year = p_direction(ye4)[1,2],
+                                      interceptp = p_direction(inter4,as_p=T)[1,2],
+                                      TPIp = p_direction(TPI4,as_p=T)[1,2],
+                                      APIp = p_direction(API4,as_p=T)[1,2],
+                                      ALUp = p_direction(ALU4,as_p=T)[1,2],
+                                      ULUp = p_direction(ALU4,as_p=T)[1,2],
+                                      TPI_APIp = p_direction(ta4,as_p=T)[1,2],
+                                      TPI_ALUp = p_direction(talu4,as_p=T)[1,2],
+                                      TPI_ULUp = p_direction(talu4,as_p=T)[1,2],
+                                      Yearp = p_direction(ye4,as_p=T)[1,2])
+
+vroom_write(p_direction_mammal_mass, "D:/Thesis Projects/GCB Revised Manuscript/pp_check/mammal_mass_LandUseUpdate.csv",delim=",")
+
+###
 M_Length_tree2 <- M_Length_tree%>%filter(is.finite(LLength))%>%
   mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
-                                         API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
-                                         HLU= ((HLU - mean(HLU,na.rm=T))/sd(HLU, na.rm=T)),
-                                         Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
-                                         LLength= ((LLength - mean(LLength,na.rm=T))/sd(LLength, na.rm=T)))%>%
+         API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
+         ULU= ((ULU - mean(ULU,na.rm=T))/sd(ULU, na.rm=T)),
+         ALU= ((ALU - mean(ALU,na.rm=T))/sd(ALU, na.rm=T)),
+         Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
+         LLength= ((LLength - mean(LLength,na.rm=T))/sd(LLength, na.rm=T)))%>%
   filter(!Dataset=="Neon")%>%filter(LLength < 10 & LLength > -10)
 
-phylo_ml <- pglmm(LLength~ TPI_Max + API + HLU
-                  + TPI_Max:API + TPI_Max:HLU+ Year
-                  + (TPI_Max|Binomial__)
-                  + (API|Binomial__)
-                  + (HLU|Binomial__)
-                  + (Year|Binomial__)
-                  + (1|Binomial__)
-                  +  (1|Realm) + (1|Site), 
-                  data=M_Length_tree2, cov_ranef = list(Binomial = mam_tree_length), 
-                  bayes = TRUE)
 
+phylo_ml_au <- pglmm(LLength~ TPI_Max + API + ALU + ULU
+                   + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU+ Year
+                   + (TPI_Max|Binomial__)
+                   + (API|Binomial__)
+                   + (ALU|Binomial__)
+                   + (ULU|Binomial__)
+                   + (Year|Binomial__)
+                   + (1|Binomial__)
+                   +  (1|Realm) + (1|Site), 
+                   data=M_Length_tree2, cov_ranef = list(Binomial = mam_tree_length), 
+                   bayes = TRUE)
+
+summary(phylo_ml_au)
+
+samples3 <- inla.posterior.sample(n = 1000, result = phylo_ml_au$inla.model)
+
+inter3 <- unlist(lapply(samples3, function(s) s$latent["(Intercept):1", 1]))
+TPI3 <- unlist(lapply(samples3, function(s) s$latent["TPI_Max:1", 1]))
+API3 <- unlist(lapply(samples3, function(s) s$latent["API:1", 1]))
+ALU3 <- unlist(lapply(samples3, function(s) s$latent["ALU:1", 1]))
+ULU3 <- unlist(lapply(samples3, function(s) s$latent["ULU:1", 1]))
+
+ta3 <- unlist(lapply(samples3, function(s) s$latent["TPI_Max:API:1", 1]))
+talu3 <- unlist(lapply(samples3, function(s) s$latent["TPI_Max:ALU:1", 1]))
+tulu3 <- unlist(lapply(samples3, function(s) s$latent["TPI_Max:ULU:1", 1]))
+
+ye3 <- unlist(lapply(samples3, function(s) s$latent["Year:1", 1]))
+
+sigma3 <- unlist(lapply(samples3,
+                        function(s) 1/sqrt(s$hyperpar["Precision for the Gaussian observations"])))
+
+y.sim3 <- inter3 + TPI3 + API3 + ALU3 + ULU3 + ta3 + talu3 + tulu3 + ye3 + rnorm(1000, sd=sigma3)
+y3 <- sample(M_Length_tree2$LLength, 1000,replace=T)
+
+d3 <- bind_rows(list(y=data.frame(y=y3), 
+                     y_sim=data.frame(y=y.sim3)),
+                .id="data.type")
+
+ggplot(d3, aes(y, color=data.type,fill=data.type)) + geom_histogram(linewidth=1)+
+  theme_minimal()+
+  scale_fill_manual(values=c("black","firebrick"))+
+  scale_colour_manual(values=c("black","firebrick"))+xlim(-3,3)+
+  labs(y="Density", x="Log10 Body Length (z-score)",color="",fill="")+
+  theme(axis.title = element_text(color="black",size=12, face="bold"),
+        axis.text = element_text(color="black",size=12))
+
+ggsave("D:/Thesis Projects/GCB Revised Manuscript/figures/Mammal Length/Mammal_Length_PP_LandUseUpdate.jpg")
+#p_direction
+p_direction_mammal_length <- data.frame(intercept = p_direction(inter3)[1,2],
+                                        TPI = p_direction(TPI3)[1,2],
+                                        API = p_direction(API3)[1,2],
+                                        ALU = p_direction(ALU3)[1,2],
+                                        ULU = p_direction(ULU3)[1,2],
+                                        TPI_API = p_direction(ta3)[1,2],
+                                        TPI_ALU = p_direction(talu3)[1,2],
+                                        TPI_ULU = p_direction(tulu3)[1,2],
+                                        Year = p_direction(ye3)[1,2],
+                                        interceptp = p_direction(inter3,as_p=T)[1,2],
+                                        TPIp = p_direction(TPI3,as_p=T)[1,2],
+                                        APIp = p_direction(API3,as_p=T)[1,2],
+                                        ALUp = p_direction(ALU3,as_p=T)[1,2],
+                                        ULUp = p_direction(ULU3,as_p=T)[1,2],
+                                        
+                                        TPI_APIp = p_direction(ta3,as_p=T)[1,2],
+                                        TPI_ALUp = p_direction(talu3,as_p=T)[1,2],
+                                        TPI_ULUp = p_direction(tulu3,as_p=T)[1,2],
+                                        Yearp = p_direction(ye3,as_p=T)[1,2])
+
+
+vroom_write(p_direction_mammal_length, "D:/Thesis Projects/GCB Revised Manuscript/pp_check/mammal_length_LandUseUpdate.csv",delim=",")
+
+###
 B_Mass_tree2 <- B_Mass_tree%>%filter(is.finite(LMass) & is.finite(API))%>%
   mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
          API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
-         HLU= ((HLU - mean(HLU,na.rm=T))/sd(HLU, na.rm=T)),
+         ULU= ((ULU - mean(ULU,na.rm=T))/sd(ULU, na.rm=T)),
+         ALU= ((ALU - mean(ALU,na.rm=T))/sd(ALU, na.rm=T)),
          Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
          LMass= ((LMass - mean(LMass,na.rm=T))/sd(LMass, na.rm=T)),
          API_w = DescTools::Winsorize(API, val = quantile(API, probs = c(0.005, 0.995), na.rm = T)))
 
-phylo_b <- pglmm(LMass ~ TPI_Max + API_w + HLU
-                 + TPI_Max:API_w + TPI_Max:HLU+ Year
-                 + (TPI_Max|Binomial__)
-                 + (API_w|Binomial__)
-                 + (HLU|Binomial__)
-                 + (Year|Binomial__)
-                 + (1|Binomial__)
-                 +  (1|Realm) + (1|Site), 
-                 data=B_Mass_tree2, cov_ranef = list(Binomial = bird_tree_mass), 
-                 bayes = TRUE)
 
-B_Length_tree2 <- B_Length_tree%>%filter(is.finite(LLength) & is.finite(API))%>%
-  mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
-                                         API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
-                                         HLU= ((HLU - mean(HLU,na.rm=T))/sd(HLU, na.rm=T)),
-                                         Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
-                                         LLength= ((LLength - mean(LLength,na.rm=T))/sd(LLength, na.rm=T)))
-
-phylo_b_l <- pglmm(LLength ~ TPI_Max + API + HLU
-                   + TPI_Max:API + TPI_Max:HLU+ Year
+phylo_b_au <- pglmm(LMass ~ TPI_Max + API_w + ALU + ULU
+                   + TPI_Max:API_w + TPI_Max:ALU + TPI_Max:ULU + Year
                    + (TPI_Max|Binomial__)
-                   + (API|Binomial__)
-                   + (HLU|Binomial__)
+                   + (API_w|Binomial__)
+                   + (ALU|Binomial__)
+                   + (ULU|Binomial__)
                    + (Year|Binomial__)
                    + (1|Binomial__)
                    +  (1|Realm) + (1|Site), 
-                   data=B_Length_tree2, cov_ranef = list(Binomial = bird_tree_length), 
+                   data=B_Mass_tree2, cov_ranef = list(Binomial = bird_tree_mass), 
                    bayes = TRUE)
 
-#Summaries#
-#Mammal Mass
-###vif
+summary(phylo_b_au)
 
-mm_vif <- lmer(LMass ~ TPI_Max + API + HLU
-               + TPI_Max:API + TPI_Max:HLU+ Year
-               + (TPI_Max + API + HLU+Year||Binomial)
-               +(1|Realm)
-               +(1|Site)
-               , data=M_Mass_tree2,
-               control = lmerControl(optimizer = "optimx", 
-                                     calc.derivs = FALSE, 
-                                     optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-ml_vif <- lmer(LLength ~ TPI_Max + API + HLU
-               + TPI_Max:API + TPI_Max:HLU+ Year
-               + (TPI_Max + API + HLU+Year||Binomial)
-               +(1|Realm)
-               +(1|Site)
-               , data=M_Length_tree2,
-               control = lmerControl(optimizer = "optimx", 
-                                     calc.derivs = FALSE, 
-                                     optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+samples2 <- inla.posterior.sample(n = 1000, result = phylo_b_au$inla.model)
+s <- samples2[[1]]$latent
 
-bm_vif <- lmer(LMass ~ TPI_Max + API + HLU
-               + TPI_Max:API + TPI_Max:HLU+ Year
-               + (TPI_Max + API + HLU+Year||Binomial)
-               +(1|Realm)
-               +(1|Site)
-               , data=B_Mass_tree2,
-               control = lmerControl(optimizer = "optimx", 
-                                     calc.derivs = FALSE, 
-                                     optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-bl_vif <- lmer(LLength ~ TPI_Max + API + HLU
-               + TPI_Max:API + TPI_Max:HLU+ Year
-               + (TPI_Max + API + HLU+Year||Binomial)
-               +(1|Realm)
-               +(1|Site)
-               , data=B_Length_tree2,
-               control = lmerControl(optimizer = "optimx", 
-                                     calc.derivs = FALSE, 
-                                     optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+inter2 <- unlist(lapply(samples2, function(s) s$latent["(Intercept):1", 1]))
+TPI2 <- unlist(lapply(samples2, function(s) s$latent["TPI_Max:1", 1]))
+API2 <- unlist(lapply(samples2, function(s) s$latent["API_w:1", 1]))
+ALU2 <- unlist(lapply(samples2, function(s) s$latent["ALU:1", 1]))
+ULU2 <- unlist(lapply(samples2, function(s) s$latent["ULU:1", 1]))
+
+ta2 <- unlist(lapply(samples2, function(s) s$latent["TPI_Max:API_w:1", 1]))
+talu2 <- unlist(lapply(samples2, function(s) s$latent["TPI_Max:ALU:1", 1]))
+tulu2 <- unlist(lapply(samples2, function(s) s$latent["TPI_Max:ULU:1", 1]))
+
+ye2 <- unlist(lapply(samples2, function(s) s$latent["Year:1", 1]))
+
+sigma2 <- unlist(lapply(samples2,
+                        function(s) 1/sqrt(s$hyperpar["Precision for the Gaussian observations"])))
+
+y.sim2 <- inter2 + TPI2 + API2 + ALU2 + ULU2 + ta2 + talu2 + tulu2 + ye2 + rnorm(1000, sd=sigma2)
+y2 <- sample(B_Mass_tree2$LMass,1000,replace=T)
+
+d2 <- bind_rows(list(y=data.frame(y=y2), 
+                     y_sim=data.frame(y=y.sim2)),
+                .id="data.type")
+
+ggplot(d2, aes(y, color=data.type,fill=data.type)) + geom_histogram(linewidth=1)+
+  theme_minimal()+
+  scale_fill_manual(values=c("black","firebrick"))+
+  scale_colour_manual(values=c("black","firebrick"))+xlim(-3,3)+
+  labs(y="Density", x="Log10 Body Mass (z-score)",color="",fill="")+
+  theme(axis.title = element_text(color="black",size=12, face="bold"),
+        axis.text = element_text(color="black",size=12))
 
 
-car::vif(mm_vif)
-car::vif(ml_vif)
-car::vif(bm_vif)
-car::vif(bl_vif)
+ggsave("D:/Thesis Projects/GCB Revised Manuscript/figures/Bird Mass/Bird_Mass_PP_LandUseUpdate.jpg")
+#p_direction
+p_direction_bird_mass <- data.frame(intercept = p_direction(inter2)[1,2],
+                                    TPI = p_direction(TPI2)[1,2],
+                                    API = p_direction(API2)[1,2],
+                                    ALU = p_direction(ALU2)[1,2],
+                                    ULU = p_direction(ULU2)[1,2],
+                                    
+                                    TPI_API = p_direction(ta2)[1,2],
+                                    TPI_ALU = p_direction(talu2)[1,2],
+                                    TPI_ULU = p_direction(tulu2)[1,2],
+                                    Year = p_direction(ye2)[1,2],
+                                    interceptp = p_direction(inter2,as_p=T)[1,2],
+                                    TPIp = p_direction(TPI2,as_p=T)[1,2],
+                                    APIp = p_direction(API2,as_p=T)[1,2],
+                                    ALUp = p_direction(ALU2,as_p=T)[1,2],
+                                    ULUp = p_direction(ULU2,as_p=T)[1,2],
+                                    TPI_APIp = p_direction(ta2,as_p=T)[1,2],
+                                    TPI_ALUp = p_direction(talu2,as_p=T)[1,2],
+                                    TPI_ULUp = p_direction(tulu2,as_p=T)[1,2],
+                                    Yearp = p_direction(ye2,as_p=T)[1,2])
 
+vroom_write(p_direction_bird_mass, "D:/Thesis Projects/GCB Revised Manuscript/pp_check/bird_mass_LandUseUpdate.csv",delim=",")
 ##
-rr2::R2_pred(phylo_m)
-
-mm.sampl <- sample_n(residuals(phylo_m) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
-  mutate(rowname = as.numeric(rowname))
-sp.corel <- ncf::spline.correlog(x = M_Mass_tree2[mm.sampl$rowname,"Lon"]$Lon,
-                                 y = M_Mass_tree2[mm.sampl$rowname,"Lat"]$Lat,                                   
-                                 z = mm.sampl[,2], 
-                                 resamp = 1000, latlon = T, xmax = 1000)
-plot(sp.corel ,main = paste("Mammal Mass Spatial Correlation"))
-
-
-M_Mass_m <- M_Mass_tree2 
-
-M_Mass_m$Resid <- residuals(phylo_m)
-
-ggplot(M_Mass_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
-  theme_bw()+xlab("Year")+ylab("Residual")
-
-D_W_df <- data.frame(NULL)
-
-for(i in 1:1000){
-  if(i %in% c(100,200,300,400,500,600,700,800,900,1000)){print(paste0(i))}
-  
-  bin <- M_Mass_m%>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-    tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-  
-  dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-  
-  df <- data.frame(dw_est = as.numeric(dw[[1]]),
-                   dw_p = as.numeric(dw[[4]]))
-  
-  D_W_df <- rbind(D_W_df,df)
-  
-}
-D_W_df <- D_W_df %>% mutate(Sig = ifelse(dw_p <=0.05,"Sig","Not Sig"))
-
-count_sig <- D_W_df %>% group_by(Sig)%>%summarise(N=n())
-vroom_write(D_W_df, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Mammal_Mass_ALL_SEX.csv")
-
-#individual autocor
-D_W_df2 <- data.frame(NULL)
-D_W_df3 <- data.frame(NULL)
-
-for(b in unique(M_Mass_m$Binomial)){
-  
-  bin <-  M_Mass_m %>% filter(Binomial == b) 
-  if(n_distinct(bin$Year)<2){
-    next
-  } else{
-    sample_size <- nrow(bin)
-    
-    unique_years <- bin %>% summarise(N = n_distinct(Year))
-    
-    bin <- bin %>% group_by(Year) %>% summarise(Resid = mean(Resid,na.rm=T)) %>% 
-      ungroup() %>% tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-    
-    dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-    
-    df2 <- data.frame(Binomial = b,
-                      dw_est = as.numeric(dw[[1]]),
-                      dw_p = as.numeric(dw[[4]]),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    D_W_df2 <- rbind(D_W_df2,df2)
-    
-    est_list<- c(NULL)
-    p_list <- c(NULL)
-    
-    for(i in 1:100){
-      
-      if(i %in% c(10,20,30,40,50,60,70,80,90,100)){print(paste0(i))}
-      
-      bin2 <-  M_Mass_m %>% filter(Binomial == b) %>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-        tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-      
-      dw2 <- lmtest::dwtest(bin2$Resid ~ bin2$Year)
-      
-      est_list <- append(est_list,as.numeric(dw2[[1]]))
-      p_list <- append(p_list,as.numeric(dw2[[4]]))
-      
-    }
-    
-    df3 <- data.frame(Binomial = b,
-                      dw_est = mean(est_list, na.rm=T),
-                      dw_p = mean(p_list, na.rm=T),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    
-    D_W_df3 <- rbind(D_W_df3,df3)
-  }
-}
-sig1 <- D_W_df2 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-sig2 <- D_W_df3 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-
-vroom_write(D_W_df2, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Mammal_Mass_Species_Mean_ALL_SEX.csv")
-vroom_write(D_W_df3, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Mammal_Mass_Species_Random_ALL_SEX.csv")
-
-#Mammal Length
-summary(phylo_ml)
-
-rr2::R2(phylo_ml)
-plot(density(resid(phylo_ml)))
-plot_bayes(phylo_ml)
-
-ml.sampl <- sample_n(residuals(phylo_ml) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
-  mutate(rowname = as.numeric(rowname))
-sp.corel <- ncf::spline.correlog(x = M_Length_tree2[ml.sampl$rowname,"Lon"]$Lon,
-                                 y = M_Length_tree2[ml.sampl$rowname,"Lat"]$Lat,                                   
-                                 z = ml.sampl[,2], 
-                                 resamp = 1000, latlon = T, xmax = 1000)
-plot(sp.corel ,main = paste("Mammal Length Spatial Correlation"))
-
-M_Length_m <- M_Length_tree2
-
-M_Length_m$Resid <- residuals(phylo_ml)
-
-ggplot(M_Length_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
-  theme_bw()+xlab("Year")+ylab("Residual")
-
-D_W_df <- data.frame(NULL)
-
-for(i in 1:1000){
-  if(i %in% c(100,200,300,400,500,600,700,800,900,1000)){print(paste0(i))}
-  
-  bin <- M_Length_m%>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-    tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-  
-  dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-  
-  df <- data.frame(dw_est = as.numeric(dw[[1]]),
-                   dw_p = as.numeric(dw[[4]]))
-  
-  D_W_df <- rbind(D_W_df,df)
-  
-}
-D_W_df <- D_W_df %>% mutate(Sig = ifelse(dw_p <=0.05,"Sig","Not Sig"))
-
-count_sig <- D_W_df %>% group_by(Sig)%>%summarise(N=n())
-
-vroom_write(D_W_df, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Mammal_Length_ALL_SEX.csv")
-
-#individual autocor
-D_W_df2 <- data.frame(NULL)
-D_W_df3 <- data.frame(NULL)
-
-for(b in unique(M_Length_m$Binomial)){
-  
-  bin <-  M_Length_m %>% filter(Binomial == b) 
-  if(n_distinct(bin$Year)<2){
-    next
-  } else{
-    sample_size <- nrow(bin)
-    
-    unique_years <- bin %>% summarise(N = n_distinct(Year))
-    
-    bin <- bin %>% group_by(Year) %>% summarise(Resid = mean(Resid,na.rm=T)) %>% 
-      ungroup() %>% tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-    
-    dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-    
-    df2 <- data.frame(Binomial = b,
-                      dw_est = as.numeric(dw[[1]]),
-                      dw_p = as.numeric(dw[[4]]),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    D_W_df2 <- rbind(D_W_df2,df2)
-    
-    est_list<- c(NULL)
-    p_list <- c(NULL)
-    
-    for(i in 1:100){
-      
-      if(i %in% c(10,20,30,40,50,60,70,80,90,100)){print(paste0(i))}
-      
-      bin2 <-  M_Length_m %>% filter(Binomial == b) %>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-        tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-      
-      dw2 <- lmtest::dwtest(bin2$Resid ~ bin2$Year)
-      
-      est_list <- append(est_list,as.numeric(dw2[[1]]))
-      p_list <- append(p_list,as.numeric(dw2[[4]]))
-      
-    }
-    
-    df3 <- data.frame(Binomial = b,
-                      dw_est = mean(est_list, na.rm=T),
-                      dw_p = mean(p_list, na.rm=T),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    
-    D_W_df3 <- rbind(D_W_df3,df3)
-  }
-}
-sig1 <- D_W_df2 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-sig2 <- D_W_df3 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-
-vroom_write(D_W_df2, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Mammal_Length_Species_Mean_ALL_SEX.csv")
-vroom_write(D_W_df3, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Mammal_Length_Species_Random_ALL_SEX.csv")
-
-#Birds Mass
-summary(phylo_b)
-
-rr2::R2(phylo_b)
-plot(density(resid(phylo_b)))
-plot_bayes(phylo_b)
-
-bm.sampl <- sample_n(residuals(phylo_b) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
-  mutate(rowname = as.numeric(rowname))
-sp.corel <- ncf::spline.correlog(x = B_Mass_tree2[bm.sampl$rowname,"Lon"]$Lon,
-                                 y = B_Mass_tree2[bm.sampl$rowname,"Lat"]$Lat,                                   
-                                 z = bm.sampl[,2], 
-                                 resamp = 1000, latlon = T, xmax = 1000)
-plot(sp.corel ,main = paste("Bird Mass Spatial Correlation"))
-
-B_Mass_m <- B_Mass_tree2
-B_Mass_m$Resid <- residuals(phylo_b)
-
-ggplot(B_Mass_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
-  theme_bw()+xlab("Year")+ylab("Residual")
-
-D_W_df <- data.frame(NULL)
-
-for(i in 1:1000){
-  if(i %in% c(100,200,300,400,500,600,700,800,900,1000)){print(paste0(i))}
-  
-  bin <- B_Mass_m%>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-    tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-  
-  dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-  
-  df <- data.frame(dw_est = as.numeric(dw[[1]]),
-                   dw_p = as.numeric(dw[[4]]))
-  
-  D_W_df <- rbind(D_W_df,df)
-  
-}
-D_W_df <- D_W_df %>% mutate(Sig = ifelse(dw_p <=0.05,"Sig","Not Sig"))
-
-count_sig <- D_W_df %>% group_by(Sig)%>%summarise(N=n())
-vroom_write(D_W_df, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Bird_Mass_ALL_SEX.csv")
-
-#individual autocor
-D_W_df2 <- data.frame(NULL)
-D_W_df3 <- data.frame(NULL)
-
-for(b in unique(B_Mass_m$Binomial)){
-  
-  bin <-  B_Mass_m %>% filter(Binomial == b) 
-  if(n_distinct(bin$Year)<2){
-    next
-  } else{
-    sample_size <- nrow(bin)
-    
-    unique_years <- bin %>% summarise(N = n_distinct(Year))
-    
-    bin <- bin %>% group_by(Year) %>% summarise(Resid = mean(Resid,na.rm=T)) %>% 
-      ungroup() %>% tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-    
-    dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-    
-    df2 <- data.frame(Binomial = b,
-                      dw_est = as.numeric(dw[[1]]),
-                      dw_p = as.numeric(dw[[4]]),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    D_W_df2 <- rbind(D_W_df2,df2)
-    
-    est_list<- c(NULL)
-    p_list <- c(NULL)
-    
-    for(i in 1:100){
-      
-      if(i %in% c(10,20,30,40,50,60,70,80,90,100)){print(paste0(i))}
-      
-      bin2 <-  B_Mass_m %>% filter(Binomial == b) %>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-        tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-      
-      dw2 <- lmtest::dwtest(bin2$Resid ~ bin2$Year)
-      
-      est_list <- append(est_list,as.numeric(dw2[[1]]))
-      p_list <- append(p_list,as.numeric(dw2[[4]]))
-      
-    }
-    
-    df3 <- data.frame(Binomial = b,
-                      dw_est = mean(est_list, na.rm=T),
-                      dw_p = mean(p_list, na.rm=T),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    
-    D_W_df3 <- rbind(D_W_df3,df3)
-  }
-}
-sig1 <- D_W_df2 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-sig2 <- D_W_df3 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-
-vroom_write(D_W_df2, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Bird_Mass_Species_Mean_ALL_SEX.csv")
-vroom_write(D_W_df3, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Bird_Mass_Species_Random_ALL_SEX.csv")
-
-#Bird Length
-summary(phylo_b_l)
-
-rr2::R2(phylo_b_l)
+##
+B_Length_tree2 <- B_Length_tree%>%filter(is.finite(LLength) & is.finite(API))%>%
+  mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
+         API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
+         ULU= ((ULU - mean(ULU,na.rm=T))/sd(ULU, na.rm=T)),
+         ALU= ((ALU - mean(ALU,na.rm=T))/sd(ALU, na.rm=T)),
+         Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
+         LLength= ((LLength - mean(LLength,na.rm=T))/sd(LLength, na.rm=T)))
 
 
-bl.sampl <- sample_n(residuals(phylo_b_l) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
-  mutate(rowname = as.numeric(rowname))
-sp.corel <- ncf::spline.correlog(x = B_Length_tree2[bl.sampl$rowname,"Lon"]$Lon,
-                                 y = B_Length_tree2[bl.sampl$rowname,"Lat"]$Lat,                                   
-                                 z = bl.sampl[,2], 
-                                 resamp = 1000, latlon = T, xmax = 1000)
-plot(sp.corel ,main = paste("Bird Length Spatial Correlation"))
+phylo_b_l_au <- pglmm(LLength ~ TPI_Max + API + ALU + ULU
+                     + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU + Year
+                     + (TPI_Max|Binomial__)
+                     + (API|Binomial__)
+                     + (ALU|Binomial__)
+                     + (ULU|Binomial__)
+                     + (Year|Binomial__)
+                     + (1|Binomial__)
+                     +  (1|Realm) + (1|Site), 
+                     data=B_Length_tree2, cov_ranef = list(Binomial = bird_tree_length), 
+                     bayes = TRUE)
 
-B_Length_m <- B_Length_tree2
+summary(phylo_b_l_au)
 
-B_Length_m$Resid <- residuals(phylo_b_l)
+samples <- inla.posterior.sample(n = 1000, result = phylo_b_l_au$inla.model)
 
-ggplot(B_Length_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
-  theme_bw()+xlab("Year")+ylab("Residual")
+inter <- unlist(lapply(samples, function(s) s$latent["(Intercept):1", 1]))
+TPI <- unlist(lapply(samples, function(s) s$latent["TPI_Max:1", 1]))
+API <- unlist(lapply(samples, function(s) s$latent["API:1", 1]))
+ALU <- unlist(lapply(samples, function(s) s$latent["ALU:1", 1]))
+ULU <- unlist(lapply(samples, function(s) s$latent["ULU:1", 1]))
 
-D_W_df <- data.frame(NULL)
+ta <- unlist(lapply(samples, function(s) s$latent["TPI_Max:API:1", 1]))
+talu <- unlist(lapply(samples, function(s) s$latent["TPI_Max:ALU:1", 1]))
+tulu <- unlist(lapply(samples, function(s) s$latent["TPI_Max:ULU:1", 1]))
 
-for(i in 1:1000){
-  if(i %in% c(100,200,300,400,500,600,700,800,900,1000)){print(paste0(i))}
-  
-  bin <- B_Length_m%>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-    tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-  
-  dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-  
-  df <- data.frame(dw_est = as.numeric(dw[[1]]),
-                   dw_p = as.numeric(dw[[4]]))
-  
-  D_W_df <- rbind(D_W_df,df)
-  
-}
-D_W_df <- D_W_df %>% mutate(Sig = ifelse(dw_p <=0.05,"Sig","Not Sig"))
+ye <- unlist(lapply(samples, function(s) s$latent["Year:1", 1]))
 
-count_sig <- D_W_df %>% group_by(Sig)%>%summarise(N=n())
-vroom_write(D_W_df, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Bird_Length_ALL_SEX.csv")
+sigma <- unlist(lapply(samples,
+                       function(s) 1/sqrt(s$hyperpar["Precision for the Gaussian observations"])))
 
-#individual autocor
-D_W_df2 <- data.frame(NULL)
-D_W_df3 <- data.frame(NULL)
+y.sim <- inter + TPI + API + ALU + ULU + ta + talu + tulu + ye + rnorm(1000, sd=sigma)
 
-for(b in unique(B_Length_m$Binomial)){
-  
-  bin <-  B_Length_m %>% filter(Binomial == b) 
-  if(n_distinct(bin$Year)<2){
-    next
-  } else{
-    sample_size <- nrow(bin)
-    
-    unique_years <- bin %>% summarise(N = n_distinct(Year))
-    
-    bin <- bin %>% group_by(Year) %>% summarise(Resid = mean(Resid,na.rm=T)) %>% 
-      ungroup() %>% tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-    
-    dw <- lmtest::dwtest(bin$Resid ~ bin$Year)
-    
-    df2 <- data.frame(Binomial = b,
-                      dw_est = as.numeric(dw[[1]]),
-                      dw_p = as.numeric(dw[[4]]),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    D_W_df2 <- rbind(D_W_df2,df2)
-    
-    est_list<- c(NULL)
-    p_list <- c(NULL)
-    
-    for(i in 1:100){
-      
-      if(i %in% c(10,20,30,40,50,60,70,80,90,100)){print(paste0(i))}
-      
-      bin2 <-  B_Length_m %>% filter(Binomial == b) %>% group_by(Year)%>%slice_sample(n=1)%>%ungroup()%>%
-        tidyr::complete(Year = tidyr::full_seq(1961:2018, 1))
-      
-      dw2 <- lmtest::dwtest(bin2$Resid ~ bin2$Year)
-      
-      est_list <- append(est_list,as.numeric(dw2[[1]]))
-      p_list <- append(p_list,as.numeric(dw2[[4]]))
-      
-    }
-    
-    df3 <- data.frame(Binomial = b,
-                      dw_est = mean(est_list, na.rm=T),
-                      dw_p = mean(p_list, na.rm=T),
-                      N_Years = unique_years[1,1],
-                      Sample_size = sample_size)
-    
-    
-    D_W_df3 <- rbind(D_W_df3,df3)
-  }
-}
-sig1 <- D_W_df2 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
-sig2 <- D_W_df3 %>% filter(dw_p <=0.05) %>% arrange(desc(Sample_size))
+y <- sample(B_Length_tree2$LLength,1000,replace=T)
 
-vroom_write(D_W_df2, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Bird_Length_Species_Mean_ALL_SEX.csv")
-vroom_write(D_W_df3, "D:/Thesis Projects/Body Size Reviewer Analyses and data/final/Autocor_Table_Bird_Length_Species_Random_ALL_SEX.csv")
+d <- bind_rows(list(y=data.frame(y=y), 
+                    y_sim=data.frame(y=y.sim)),
+               .id="data.type")
 
-###
-#3 Combined mass length and cubed root divide by length models####
+ggplot(d, aes(y, color=data.type,fill=data.type)) + geom_histogram(linewidth=1)+
+  theme_minimal()+
+  scale_fill_manual(values=c("black","firebrick"))+
+  scale_colour_manual(values=c("black","firebrick"))+xlim(-1,3)+
+  labs(y="Density", x="Log10 Body Length (z-score)",color="",fill="")+
+  theme(axis.title = element_text(color="black",size=12, face="bold"),
+        axis.text = element_text(color="black",size=12))
+
+ggsave("D:/Thesis Projects/GCB Revised Manuscript/figures/Bird Length/Bird_Length_PP_LandUseUpdate.jpg")
+#p_direction
+p_direction_bird_length <- data.frame(intercept = p_direction(inter)[1,2],
+                                      TPI = p_direction(TPI)[1,2],
+                                      API = p_direction(API)[1,2],
+                                      ALU = p_direction(ALU)[1,2],
+                                      ULU = p_direction(ULU)[1,2],
+                                      
+                                      TPI_API = p_direction(ta)[1,2],
+                                      TPI_ALU = p_direction(talu)[1,2],
+                                      TPI_ULU = p_direction(tulu)[1,2],
+                                      Year = p_direction(ye)[1,2],
+                                      interceptp = p_direction(inter,as_p=T)[1,2],
+                                      TPIp = p_direction(TPI,as_p=T)[1,2],
+                                      APIp = p_direction(API,as_p=T)[1,2],
+                                      ALUp = p_direction(ALU,as_p=T)[1,2],
+                                      ULUp = p_direction(ULU,as_p=T)[1,2],
+                                      TPI_APIp = p_direction(ta,as_p=T)[1,2],
+                                      TPI_ALUp = p_direction(talu,as_p=T)[1,2],
+                                      TPI_ULUp = p_direction(tulu,as_p=T)[1,2],
+                                      Yearp = p_direction(ye,as_p=T)[1,2])
+
+vroom_write(p_direction_bird_length, "D:/Thesis Projects/GCB Revised Manuscript/pp_check/bird_length_LandUseUpdate.csv",delim=",")
+####
+
 library(DescTools)
 M_Mass_Length <- M_Mass_tree %>% filter(!is.na(Body_Length) & !Dataset=="Neon")%>%
   mutate(LLength = log10(Body_Length),
@@ -729,6 +412,8 @@ M_Mass_Length <- M_Mass_tree %>% filter(!is.na(Body_Length) & !Dataset=="Neon")%
   mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
          API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
          HLU= ((HLU - mean(HLU,na.rm=T))/sd(HLU, na.rm=T)),
+         ULU= ((ULU - mean(ULU,na.rm=T))/sd(ULU, na.rm=T)),
+         ALU= ((ALU - mean(ALU,na.rm=T))/sd(ALU, na.rm=T)),
          Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
          LMass= ((LMass - mean(LMass,na.rm=T))/sd(LMass, na.rm=T)),
          LLength= ((LLength - mean(LLength,na.rm=T))/sd(LLength, na.rm=T)),
@@ -744,125 +429,162 @@ B_Mass_Length <- B_Mass_tree %>% filter(!is.na(Body_Length))%>%
   mutate(TPI_Max= ((TPI_Max - mean(TPI_Max,na.rm=T))/sd(TPI_Max, na.rm=T)),
          API= ((API - mean(API,na.rm=T))/sd(API, na.rm=T)),
          HLU= ((HLU - mean(HLU,na.rm=T))/sd(HLU, na.rm=T)),
+         ULU= ((ULU - mean(ULU,na.rm=T))/sd(ULU, na.rm=T)),
+         ALU= ((ALU - mean(ALU,na.rm=T))/sd(ALU, na.rm=T)),
          Year = ((Year - mean(Year,na.rm=T))/sd(Year, na.rm=T)),
          LMass= ((LMass - mean(LMass,na.rm=T))/sd(LMass, na.rm=T)),
          LLength= ((LLength - mean(LLength,na.rm=T))/sd(LLength, na.rm=T)),
          Body_Size = ((Body_Size - mean(Body_Size,na.rm=T))/sd(Body_Size, na.rm=T)),
          Body_Size_w = ((Body_Size_w - mean(Body_Size_w,na.rm=T))/sd(Body_Size_w, na.rm=T)))
 
-hist(B_Mass_Length$Body_Size)
-
 mam_tree_mass2 <- drop.tip(mammaltree, mammaltree$tip.label[-na.omit(match(unique(M_Mass_Length$Binomial),mammaltree$tip.label))])
 bird_tree_mass2 <-drop.tip(Birdtree, Birdtree$tip.label[-na.omit(match(unique(B_Mass_Length$Binomial),Birdtree$tip.label))])
 
-M_Mass_compare <- pglmm(LMass ~ TPI_Max + API + HLU
-                        + TPI_Max:API + TPI_Max:HLU+ Year
-                        + (TPI_Max|Binomial__)
-                        + (API|Binomial__)
-                        + (HLU|Binomial__)
-                        + (Year|Binomial__)
-                        + (1|Binomial__)
-                        +  (1|Realm) + (1|Site), 
-                        data=M_Mass_Length, cov_ranef = list(Binomial = mam_tree_mass2), 
-                        bayes = TRUE)
+vroom_write(M_Mass_Length,"D:/Thesis Projects/GCB Revised Manuscript/Datasets/Mammal_Size.csv",delim=",")
 
-M_Length_compare <- pglmm(LLength_w ~ TPI_Max + API + HLU
-                          + TPI_Max:API + TPI_Max:HLU+ Year
-                          + (TPI_Max|Binomial__)
-                          + (API|Binomial__)
-                          + (HLU|Binomial__)
-                          + (Year|Binomial__)
-                          + (1|Binomial__)
-                          +  (1|Realm) + (1|Site), 
-                          data=M_Mass_Length, cov_ranef = list(Binomial = mam_tree_mass2), 
-                          bayes = TRUE)
-
-B_Mass_compare <- pglmm(LMass ~ TPI_Max + API + HLU
-                        + TPI_Max:API + TPI_Max:HLU+ Year
-                        + (TPI_Max|Binomial__)
-                        + (API|Binomial__)
-                        + (HLU|Binomial__)
-                        + (Year|Binomial__)
-                        + (1|Binomial__)
-                        +  (1|Realm) + (1|Site), 
-                        data=B_Mass_Length, cov_ranef = list(Binomial = bird_tree_mass2), 
-                        bayes = TRUE)
-
-B_Length_compare <- pglmm(LLength_w ~ TPI_Max + API + HLU
-                          + TPI_Max:API + TPI_Max:HLU+ Year
-                          + (TPI_Max|Binomial__)
-                          + (API|Binomial__)
-                          + (HLU|Binomial__)
-                          + (Year|Binomial__)
-                          + (1|Binomial__)
-                          +  (1|Realm) + (1|Site), 
-                          data=B_Mass_Length, cov_ranef = list(Binomial = bird_tree_mass2), 
-                          bayes = TRUE)
-
-M_Size_Model <- pglmm(Body_Size_w ~ TPI_Max + API + HLU
-                      + TPI_Max:API + TPI_Max:HLU+ Year
+vroom_write(B_Mass_Length,"D:/Thesis Projects/GCB Revised Manuscript/Datasets/Bird_Size.csv",delim=",")
+phylo_m_ml_au <- pglmm(Body_Size_w ~ TPI_Max + API + ALU + ULU
+                      + TPI_Max:API + TPI_Max:ALU+ TPI_Max:ULU + Year
                       + (TPI_Max|Binomial__)
                       + (API|Binomial__)
-                      + (HLU|Binomial__)
+                      + (ALU|Binomial__)
+                      + (ULU|Binomial__)
                       + (Year|Binomial__)
                       + (1|Binomial__)
                       +  (1|Realm) + (1|Site), 
                       data=M_Mass_Length, cov_ranef = list(Binomial = mam_tree_mass2), 
                       bayes = TRUE)
 
-B_Size_Model <- pglmm(Body_Size_w ~ TPI_Max + API + HLU
-                      + TPI_Max:API + TPI_Max:HLU+ Year
-                      + (TPI_Max|Binomial__)
-                      + (API|Binomial__)
-                      + (HLU|Binomial__)
-                      + (Year|Binomial__)
-                      + (1|Binomial__)
-                      +  (1|Realm) + (1|Site), 
-                      data=B_Mass_Length, cov_ranef = list(Binomial = bird_tree_mass2), 
-                      bayes = TRUE)
-car::vif(M_Mass_compare)
+summary(phylo_m_ml_u)
+summary(phylo_m_ml_a)
+summary(phylo_m_ml_au)
 
-summary(M_Mass_compare)
-summary(M_Length_compare)
-summary(B_Mass_compare)
-summary(B_Length_compare)
-#
-summary(M_Size_Model)
-summary(B_Size_Model)
+samples6 <- inla.posterior.sample(n = 1000, result = phylo_m_ml_au$inla.model)
 
-ms_vif <- lmer(Body_Size ~ TPI_Max + API + HLU
-               + TPI_Max:API + TPI_Max:HLU+ Year
-               + (TPI_Max + API + HLU+Year||Binomial)
-               +(1|Realm)
-               +(1|Site)
-               , data=M_Mass_Length,
-               control = lmerControl(optimizer = "optimx", 
-                                     calc.derivs = FALSE, 
-                                     optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
+inter6 <- unlist(lapply(samples6, function(s) s$latent["(Intercept):1", 1]))
+TPI6 <- unlist(lapply(samples6, function(s) s$latent["TPI_Max:1", 1]))
+API6 <- unlist(lapply(samples6, function(s) s$latent["API:1", 1]))
+HLU6 <- unlist(lapply(samples6, function(s) s$latent["HLU:1", 1]))
+ta6 <- unlist(lapply(samples6, function(s) s$latent["TPI_Max:API:1", 1]))
+th6 <- unlist(lapply(samples6, function(s) s$latent["TPI_Max:HLU:1", 1]))
+ye6 <- unlist(lapply(samples6, function(s) s$latent["Year:1", 1]))
 
-bs_vif <- lmer(Body_Size ~ TPI_Max + API + HLU
-               + TPI_Max:API + TPI_Max:HLU+ Year
-               + (TPI_Max + API + HLU+Year||Binomial)
-               +(1|Realm)
-               +(1|Site)
-               , data=B_Mass_Length,
-               control = lmerControl(optimizer = "optimx", 
-                                     calc.derivs = FALSE, 
-                                     optCtrl = list(method = "nlminb", starttests = FALSE, kkt = FALSE)))
-rr2::R2_pred(M_Mass_compare)
-rr2::R2_pred(M_Length_compare)
+sigma6 <- unlist(lapply(samples6,
+                        function(s) 1/sqrt(s$hyperpar["Precision for the Gaussian observations"])))
 
-rr2::R2_pred(B_Mass_compare)
-rr2::R2_pred(B_Length_compare)
+y.sim6 <- inter6 + TPI6 + API6 + HLU6 + ta6 + th6 + ye6 + rnorm(1000, sd=sigma6)
 
-car::vif(ms_vif)
-car::vif(bs_vif)
+y6 <- sample(M_Mass_Length$Body_Size_w,1000,replace=T)
 
-rr2::R2_pred(M_Size_Model)
+d6 <- bind_rows(list(y=data.frame(y=y6), 
+                     y_sim=data.frame(y=y.sim6)),
+                .id="data.type")
 
-rr2::R2_pred(B_Size_Model)
+ggplot(d6, aes(y, color=data.type,fill=data.type)) + geom_histogram(linewidth=1)+
+  theme_minimal()+
+  scale_fill_manual(values=c("black","firebrick"))+
+  scale_colour_manual(values=c("black","firebrick"))+xlim(-1,3)+
+  labs(y="Density", x="Log10 Mass:Length Ratio (z-score)",color="",fill="")+
+  theme(axis.title = element_text(color="black",size=12, face="bold"),
+        axis.text = element_text(color="black",size=12))
 
-####Figures####
+ggsave("D:/Thesis Projects/GCB Revised Manuscript/figures/Mammal Length/Mammal_Mass_Length_PP_LandUseUpdate.jpg")
+
+p_direction_mammal_mass_length <- data.frame(intercept = p_direction(inter5)[1,2],
+                                             TPI = p_direction(TPI5)[1,2],
+                                             API = p_direction(API5)[1,2],
+                                             HLU = p_direction(HLU5)[1,2],
+                                             TPI_API = p_direction(ta5)[1,2],
+                                             TPI_HLU = p_direction(th5)[1,2],
+                                             Year = p_direction(ye5)[1,2],
+                                             interceptp = p_direction(inter5,as_p=T)[1,2],
+                                             TPIp = p_direction(TPI5,as_p=T)[1,2],
+                                             APIp = p_direction(API5,as_p=T)[1,2],
+                                             HLUp = p_direction(HLU5,as_p=T)[1,2],
+                                             TPI_APIp = p_direction(ta5,as_p=T)[1,2],
+                                             TPI_HLUp = p_direction(th5,as_p=T)[1,2],
+                                             Yearp = p_direction(ye5,as_p=T)[1,2])
+
+vroom_write(p_direction_mammal_mass_length, "D:/Thesis Projects/GCB Revised Manuscript/pp_check/Mammal_mass_length_LandUseUpdate.csv",delim=",")
+###
+###
+
+phylo_b_ml_au <- pglmm(Body_Size_w ~ TPI_Max + API+ ALU + ULU
+                       + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU + Year
+                       + (TPI_Max|Binomial__)
+                       + (API|Binomial__)
+                       + (ALU|Binomial__)
+                       + (ULU|Binomial__)
+                       + (Year|Binomial__)
+                       + (1|Binomial__)
+                       +  (1|Realm) + (1|Site), 
+                       data=B_Mass_Length, cov_ranef = list(Binomial = bird_tree_mass2), 
+                       bayes = TRUE)
+
+summary(phylo_b_ml_u)
+summary(phylo_b_ml_a)
+summary(phylo_b_ml_au)
+
+#PPcheck
+samples5 <- inla.posterior.sample(n = 1000, result = phylo_b_ml_au$inla.model)
+
+inter5 <- unlist(lapply(samples5, function(s) s$latent["(Intercept):1", 1]))
+TPI5 <- unlist(lapply(samples5, function(s) s$latent["TPI_Max:1", 1]))
+API5 <- unlist(lapply(samples5, function(s) s$latent["API:1", 1]))
+HLU5 <- unlist(lapply(samples5, function(s) s$latent["HLU:1", 1]))
+ta5 <- unlist(lapply(samples5, function(s) s$latent["TPI_Max:API:1", 1]))
+th5 <- unlist(lapply(samples5, function(s) s$latent["TPI_Max:HLU:1", 1]))
+ye5 <- unlist(lapply(samples5, function(s) s$latent["Year:1", 1]))
+
+sigma5 <- unlist(lapply(samples5,
+                        function(s) 1/sqrt(s$hyperpar["Precision for the Gaussian observations"])))
+
+y.sim5 <- inter5 + TPI5 + API5 + HLU5 + ta5 + th5 + ye5 + rnorm(1000, sd=sigma5)
+
+y5 <- sample(B_Mass_Length$Body_Size_w,1000,replace=T)
+
+d5 <- bind_rows(list(y=data.frame(y=y5), 
+                     y_sim=data.frame(y=y.sim5)),
+                .id="data.type")
+
+ggplot(d5, aes(y, color=data.type,fill=data.type)) + geom_histogram(linewidth=1)+
+  theme_minimal()+
+  scale_fill_manual(values=c("black","firebrick"))+
+  scale_colour_manual(values=c("black","firebrick"))+xlim(-1,3)+
+  labs(y="Density", x="Log10 Mass:Length Ratio (z-score)",color="",fill="")+
+  theme(axis.title = element_text(color="black",size=12, face="bold"),
+        axis.text = element_text(color="black",size=12))
+
+ggsave("D:/Thesis Projects/GCB Revised Manuscript/figures/Bird Length/Bird_Mass_Length_PP_LandUseUpdate.jpg")
+
+p_direction_bird_mass_length <- data.frame(intercept = p_direction(inter5)[1,2],
+                                           TPI = p_direction(TPI5)[1,2],
+                                           API = p_direction(API5)[1,2],
+                                           HLU = p_direction(HLU5)[1,2],
+                                           TPI_API = p_direction(ta5)[1,2],
+                                           TPI_HLU = p_direction(th5)[1,2],
+                                           Year = p_direction(ye5)[1,2],
+                                           interceptp = p_direction(inter5,as_p=T)[1,2],
+                                           TPIp = p_direction(TPI5,as_p=T)[1,2],
+                                           APIp = p_direction(API5,as_p=T)[1,2],
+                                           HLUp = p_direction(HLU5,as_p=T)[1,2],
+                                           TPI_APIp = p_direction(ta5,as_p=T)[1,2],
+                                           TPI_HLUp = p_direction(th5,as_p=T)[1,2],
+                                           Yearp = p_direction(ye5,as_p=T)[1,2])
+
+vroom_write(p_direction_bird_mass_length, "D:/Thesis Projects/GCB Revised Manuscript/pp_check/bird_mass_length_LandUseUpdate.csv",delim=",")
+
+
+###get model variables
+rr2::R2_pred(phylo_b_au)
+rr2::R2_pred(phylo_b_l_au)
+rr2::R2_pred(phylo_b_ml_au)
+rr2::R2_pred(phylo_m_au)
+rr2::R2_pred(phylo_ml_au)
+rr2::R2_pred(phylo_m_ml_au)
+
+##coeff plots
+##coeff plots
 fixed_eff_plot <- function(x, n_samp = 1000, sort = TRUE, ...) {
   
   if(!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -891,10 +613,11 @@ fixed_eff_plot <- function(x, n_samp = 1000, sort = TRUE, ...) {
   samps <- fixed_samps %>%
     dplyr::filter(!var=="(Intercept)")%>%
     dplyr::mutate(var= ifelse(var=="TPI_Max", "TPI",
-                              ifelse(var=="HLU_5","HLU",
-                                     ifelse(var=="TPI_Max:HLU_5", "TPI:HLU",
+                              ifelse(var=="API_w","API",
+                                     ifelse(var=="TPI_Max:ULU", "TPI:ULU",
                                             ifelse(var=="TPI_Max:API","TPI:API",
-                                                   ifelse(var=="TPI_Max:HLU","TPI:HLU",var))))))%>%
+                                                   ifelse(var=="TPI_Max:ALU","TPI:ALU",
+                                                          ifelse(var=="TPI_Max:API_w","TPI:API",var)))))))%>%
     dplyr::mutate(effect_type = factor(effect_type, 
                                        levels = c("Fixed Effects")))
   
@@ -921,7 +644,7 @@ fixed_eff_plot <- function(x, n_samp = 1000, sort = TRUE, ...) {
   if(sort){
     samps <- dplyr::mutate(samps, var = factor(var, levels = levels(sig_vars$var)))
   }
-  samps$var <- factor(samps$var, levels=c("TPI:HLU","TPI:API","Year", "HLU", "API","TPI"))
+  samps$var <- factor(samps$var, levels=c("TPI:ULU","TPI:ALU","TPI:API","Year", "ULU", "ALU" ,"API","TPI"))
   
   samps <- samps %>%
     dplyr::left_join(sig_vars, by = "var") %>%
@@ -952,133 +675,225 @@ fixed_eff_plot <- function(x, n_samp = 1000, sort = TRUE, ...) {
   p
 }
 
-fixed_eff_plot(phylo_m)
+fixed_eff_plot(phylo_m_au)
 ggsave("mass_mammal_plot_all.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
-fixed_eff_plot(phylo_ml)
+fixed_eff_plot(phylo_ml_au)
 ggsave("length_mammal_plot_all.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
-fixed_eff_plot(phylo_b)
-ggsave("mass_bird_plot_all.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
-
-fixed_eff_plot(phylo_b_l)
-ggsave("length_bird_plot_all.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
-
-fixed_eff_plot(M_Size_Model)
+fixed_eff_plot(phylo_m_ml_au)
 ggsave("size_mammal_plot_all.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
-fixed_eff_plot(B_Size_Model)
+fixed_eff_plot(phylo_b_au)
+ggsave("mass_bird_plot_all.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+
+fixed_eff_plot(phylo_b_l_au)
+ggsave("length_bird_plot_all.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+
+fixed_eff_plot(phylo_b_ml_au)
 ggsave("size_bird_plot_all.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
-
-api <- vroom("D:/PhD/Thesis/Body Size Chapter/A_SUBMISSION_UPDATED/FINAL SUBMISSION/Nature CC submission/Nautre Com/Reviewed Manuscript/fig2.csv")%>%
-  group_by(Class,Metric)%>%mutate(Group = paste0(Class, " ",Metric))%>%ungroup()
-
-ggplot(api, aes(x=API, y = `TPI Estimate`))+
-  geom_point(size=4, aes(color = Group), position = position_dodge(width=0.5),shape=18)+
-  geom_errorbar(position=position_dodge(width = 0.5), aes(color=Group,ymin=lower_ci, ymax=upper_ci), width=.2,linewidth=1)+
-  scale_color_manual(values=c("firebrick", "steelblue", "black"))+
-  geom_hline(yintercept = 0,linewidth=1,linetype="dashed")+
-  labs(x = "API (z score)",
-       y = "TPI Coefficient Estimate")+
-  theme_hc()+
-  theme(axis.title = element_text(size=14, color="black"),
-        axis.text = element_text(size=12, color="black"))
-
-ggsave("mammal_plot_tpiapi.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
-
-       
-#maps
-library(terra)
-global_raster <- rast("E:/Coding Files/Climate Data/Temperature Files/Tmax/Baseline/tmax_1961_01.tif")
-global_raster <- global_raster*0
-global_raster_100 <- aggregate(global_raster,fact=24)
+## autocor
 #mammal mass
-mam_points <- M_Mass_tree%>%dplyr::select(Binomial,Lon,Lat)%>%mutate(count=1)
-xy_mam_points <- as.matrix(mam_points%>%dplyr::select(Lon,Lat))
-global_raster_mm <- rasterize(xy_mam_points, global_raster_100, values=mam_points$count, fun = sum, touches=T)
-plot(global_raster_mm)
-writeRaster(global_raster_mm, "D:/Thesis Projects/Body Size Reviewer Analyses and data/figures/Mammal_Mass_distribution.tif")
-#mammal length
-mam_pointsl <- M_Length_tree%>%dplyr::select(Binomial,Lon,Lat)%>%mutate(count=1)
-xy_mam_pointsl <- as.matrix(mam_pointsl%>%dplyr::select(Lon,Lat))
-global_raster_ml <- rasterize(xy_mam_pointsl, global_raster_100, values=mam_pointsl$count, fun = sum, touches=T)
-plot(global_raster_ml)
-writeRaster(global_raster_ml, "D:/Thesis Projects/Body Size Reviewer Analyses and data/figures/Mammal_Length_distribution.tif")
+mm.sampl <- sample_n(residuals(phylo_m_a) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
+  mutate(rowname = as.numeric(rowname))
+sp.corel <- ncf::spline.correlog(x = M_Mass_tree2[mm.sampl$rowname,"Lon"]$Lon,
+                                 y = M_Mass_tree2[mm.sampl$rowname,"Lat"]$Lat,                                   
+                                 z = mm.sampl[,2], 
+                                 resamp = 1000, latlon = T, xmax = 1000)
+plot(sp.corel ,main = paste("Mammal Mass Spatial Correlation"))
+ggsave("mass_mammal_autocor.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
-#bird mass
-bird_points <- B_Mass_tree%>%dplyr::select(Binomial,Lon,Lat)%>%mutate(count=1)
-xy_bird_points <- as.matrix(bird_points%>%dplyr::select(Lon,Lat))
-global_raster_bm <- rasterize(xy_bird_points, global_raster_100, values=bird_points$count, fun = sum, touches=T)
-plot(global_raster_bm)
-writeRaster(global_raster_bm, "D:/Thesis Projects/Body Size Reviewer Analyses and data/figures/Bird_Mass_distribution.tif")
+M_Mass_m <- M_Mass_tree2 
 
-#bird length
-bird_pointsl <- B_Length_tree%>%dplyr::select(Binomial,Lon,Lat)%>%mutate(count=1)
-xy_bird_pointsl <- as.matrix(bird_pointsl%>%dplyr::select(Lon,Lat))
-global_raster_bl <- rasterize(xy_bird_pointsl, global_raster_100, values=bird_pointsl$count, fun = sum, touches=T)
-plot(global_raster_bl)
-writeRaster(global_raster_bl, "D:/Thesis Projects/Body Size Reviewer Analyses and data/figures/Bird_Length_distribution.tif")
-
-##mam points combo
-mm <- M_Mass_tree %>% filter(is.na(Body_Length))%>%dplyr::select(Binomial,Lat,Lon)%>%mutate(count=1)
-ml <- M_Length_tree %>%dplyr::select(Binomial,Lat,Lon)%>%mutate(count=1)%>%rbind(mm)
-xy_ml_points <- as.matrix(ml%>%dplyr::select(Lon,Lat))
-global_raster_ml_c <- rasterize(xy_ml_points, global_raster_100, values=ml$count, fun = sum, touches=T)
-plot(global_raster_ml_c)
-writeRaster(global_raster_ml_c, "D:/Thesis Projects/Body Size Reviewer Analyses and data/figures/Mammal_all_distribution.tif")
-
-bm <- B_Mass_tree %>% filter(is.na(Body_Length))%>%dplyr::select(Binomial,Lat,Lon)%>%mutate(count=1)
-bl <- B_Length_tree %>%dplyr::select(Binomial,Lat,Lon)%>%mutate(count=1)%>%rbind(bm)
-xy_bl_points <- as.matrix(bl%>%dplyr::select(Lon,Lat))
-global_raster_bl_c <- rasterize(xy_bl_points, global_raster_100, values=bl$count, fun = sum, touches=T)
-plot(global_raster_bl_c)
-writeRaster(global_raster_bl_c, "D:/Thesis Projects/Body Size Reviewer Analyses and data/figures/bird_all_distribution.tif")
-
-
-
-
-M_Mass_m <- M_Mass_10_tree 
-M_Mass_m$Resid <- residuals(Mammal_Mass_Mod_10)
+M_Mass_m$Resid <- residuals(phylo_m_au)
 
 ggplot(M_Mass_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
   theme_bw()+xlab("Year")+ylab("Residual")
 
 ggsave("mass_mammal_resid_year.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+#mammal length
+ml.sampl <- sample_n(residuals(phylo_ml_au) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
+  mutate(rowname = as.numeric(rowname))
+sp.corel <- ncf::spline.correlog(x = M_Length_tree2[ml.sampl$rowname,"Lon"]$Lon,
+                                 y = M_Length_tree2[ml.sampl$rowname,"Lat"]$Lat,                                   
+                                 z = ml.sampl[,2], 
+                                 resamp = 1000, latlon = T, xmax = 1000)
+plot(sp.corel ,main = paste("Mammal Length Spatial Correlation"))
 
-M_Length_m <- M_Length_10_tree 
-M_Length_m$Resid <- residuals(Mammal_Length_Mod_10)
+
+M_Length_m <- M_Length_tree2
+
+M_Length_m$Resid <- residuals(phylo_ml_au)
 
 ggplot(M_Length_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
   theme_bw()+xlab("Year")+ylab("Residual")
-
 ggsave("length_mammal_resid_year.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+#mammal size
+mml.sampl <- sample_n(residuals(phylo_m_ml_au) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
+  mutate(rowname = as.numeric(rowname))
+sp.corel <- ncf::spline.correlog(x = M_Mass_Length[mml.sampl$rowname,"Lon"]$Lon,
+                                 y = M_Mass_Length[mml.sampl$rowname,"Lat"]$Lat,                                   
+                                 z = mml.sampl[,2], 
+                                 resamp = 1000, latlon = T, xmax = 1000)
+plot(sp.corel ,main = paste("Mammal Mass:Length Spatial Correlation"))
 
+ggsave("mass_length_mammal_autocor.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
+M_Mass_ml <- M_Mass_Length 
 
-B_Mass_m <- B_Mass_10_tree 
-B_Mass_m$Resid <- residuals(Bird_Mass_Mod_10)
+M_Mass_ml$Resid <- residuals(phylo_m_m_au)
+
+ggplot(M_Mass_ml, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
+  theme_bw()+xlab("Year")+ylab("Residual")
+
+ggsave("mass_length_mammal_resid_year.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+#bird mass
+bm.sampl <- sample_n(residuals(phylo_b_au) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
+  mutate(rowname = as.numeric(rowname))
+sp.corel <- ncf::spline.correlog(x = M_Mass_tree2[bm.sampl$rowname,"Lon"]$Lon,
+                                 y = M_Mass_tree2[bm.sampl$rowname,"Lat"]$Lat,                                   
+                                 z = bm.sampl[,2], 
+                                 resamp = 1000, latlon = T, xmax = 1000)
+plot(sp.corel ,main = paste("Bird Mass Spatial Correlation"))
+
+ggsave("mass_bird_autocor.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+
+B_Mass_m <- B_Mass_tree2 
+
+B_Mass_m$Resid <- residuals(phylo_b_au)
 
 ggplot(B_Mass_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
   theme_bw()+xlab("Year")+ylab("Residual")
 
 ggsave("mass_bird_resid_year.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
 
-B_Length_m <-B_Length_10_tree 
-B_Length_m$Resid <- residuals(Bird_Length_Mod_10)
+#bird length
+bl.sampl <- sample_n(residuals(phylo_b_l_au) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
+  mutate(rowname = as.numeric(rowname))
+sp.corel <- ncf::spline.correlog(x = B_Length_tree2[bl.sampl$rowname,"Lon"]$Lon,
+                                 y = B_Length_tree2[bl.sampl$rowname,"Lat"]$Lat,                                   
+                                 z = bl.sampl[,2], 
+                                 resamp = 1000, latlon = T, xmax = 1000)
+plot(sp.corel ,main = paste("Bird Length Spatial Correlation"))
+
+
+B_Length_m <- B_Length_tree2
+
+B_Length_m$Resid <- residuals(phylo_b_l_au)
 
 ggplot(B_Length_m, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
   theme_bw()+xlab("Year")+ylab("Residual")
 
 ggsave("length_bird_resid_year.jpg",
-       path="D:/Thesis Projects/Body Size Reviewer Analyses and data/figures")
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+
+#bird size
+bml.sampl <- sample_n(residuals(phylo_b_ml_au) %>% as.data.frame() %>% tibble::rownames_to_column(), 3000)%>%
+  mutate(rowname = as.numeric(rowname))
+sp.corel <- ncf::spline.correlog(x = B_Mass_Length[bml.sampl$rowname,"Lon"]$Lon,
+                                 y = B_Mass_Length[bml.sampl$rowname,"Lat"]$Lat,                                   
+                                 z = bml.sampl[,2], 
+                                 resamp = 1000, latlon = T, xmax = 1000)
+plot(sp.corel ,main = paste("Bird Mass:Length Spatial Correlation"))
+ggsave("mass_length_bird_autocor.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+
+B_Mass_ml <- B_Mass_Length 
+
+B_Mass_ml$Resid <- residuals(phylo_b_ml_au)
+
+ggplot(B_Mass_ml, aes(x=Year, y=Resid))+geom_point(alpha=0.1, size=1)+geom_smooth(color="red")+
+  theme_bw()+xlab("Year")+ylab("Residual")
+
+ggsave("mass_length_bird_resid_year.jpg",
+       path="D:/Thesis Projects/GCB Revised Manuscript/figures/New figs land use")
+
+##no year check
+
+phylo_b_au_no_year <- pglmm(LMass ~ TPI_Max + API_w + ALU + ULU
+                            + TPI_Max:API_w + TPI_Max:ALU + TPI_Max:ULU
+                            + (TPI_Max|Binomial__)
+                            + (API_w|Binomial__)
+                            + (ALU|Binomial__)
+                            + (ULU|Binomial__)
+                            + (1|Binomial__) + (1|Realm) + (1|Site), 
+                            data=B_Mass_tree2, cov_ranef = list(Binomial = bird_tree_mass), 
+                            bayes = TRUE)
+summary(phylo_b_au_no_year)
+
+phylo_b_l_au_no_year <- pglmm(LLength ~ TPI_Max + API + ALU + ULU
+                              + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU
+                              + (TPI_Max|Binomial__)
+                              + (API|Binomial__)
+                              + (ALU|Binomial__)
+                              + (ULU|Binomial__)
+                              + (1|Binomial__)
+                              +  (1|Realm) + (1|Site), 
+                              data=B_Length_tree2, cov_ranef = list(Binomial = bird_tree_length), 
+                              bayes = TRUE)
+
+summary(phylo_b_l_au_no_year)
+
+phylo_b_ml_au_no_year <- pglmm(Body_Size_w ~ TPI_Max + API+ ALU + ULU
+                               + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU
+                               + (TPI_Max|Binomial__)
+                               + (API|Binomial__)
+                               + (ALU|Binomial__)
+                               + (ULU|Binomial__)
+                               + (1|Binomial__)
+                               +  (1|Realm) + (1|Site), 
+                               data=B_Mass_Length, cov_ranef = list(Binomial = bird_tree_mass2), 
+                               bayes = TRUE)
+summary(phylo_b_ml_au_no_year)
+
+#mammal
+
+phylo_m_au_no_year <- pglmm(LMass ~ TPI_Max + API + ALU + ULU
+                            + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU
+                            + (TPI_Max|Binomial__)
+                            + (API|Binomial__)
+                            + (ALU|Binomial__)
+                            + (ULU|Binomial__)
+                            + (1|Binomial__) + (1|Realm) + (1|Site), 
+                            data=M_Mass_tree2, cov_ranef = list(Binomial = mam_tree_mass), 
+                            bayes = TRUE)
+summary(phylo_m_au_no_year)
+
+phylo_m_l_au_no_year <- pglmm(LLength ~ TPI_Max + API + ALU + ULU
+                              + TPI_Max:API + TPI_Max:ALU + TPI_Max:ULU
+                              + (TPI_Max|Binomial__)
+                              + (API|Binomial__)
+                              + (ALU|Binomial__)
+                              + (ULU|Binomial__)
+                              + (1|Binomial__)
+                              +  (1|Realm) + (1|Site), 
+                              data=M_Length_tree2, cov_ranef = list(Binomial = mam_tree_length), 
+                              bayes = TRUE)
+
+summary(phylo_m_l_au_no_year)
+
+phylo_m_ml_au_no_year <- pglmm(Body_Size_w ~ TPI_Max + API + ALU + ULU
+                               + TPI_Max:API + TPI_Max:ALU+ TPI_Max:ULU 
+                               + (TPI_Max|Binomial__)
+                               + (API|Binomial__)
+                               + (ALU|Binomial__)
+                               + (ULU|Binomial__)
+                               + (1|Binomial__)
+                               +  (1|Realm) + (1|Site), 
+                               data=M_Mass_Length, cov_ranef = list(Binomial = mam_tree_mass2), 
+                               bayes = TRUE)
+summary(phylo_m_ml_au_no_year)
